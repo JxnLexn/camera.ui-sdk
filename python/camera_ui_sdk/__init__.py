@@ -83,9 +83,11 @@ from .manager import (
     CreateStreamDownloadOptions,
     DeviceManager,
     DiscoveredCamera,
+    DiscoveredSensor,
     DownloadManager,
     DownloadToken,
     NotificationManager,
+    RegisteredSensorInfo,
     SensorHistoryEntry,
     SensorManager,
 )
@@ -146,6 +148,7 @@ from .plugin import (
     PluginInterfaces,
     PluginRole,
     PythonVersion,
+    SensorDiscoveryProvider,
     Severity,
     can_create_cameras,
     can_provide_sensors_to_any_cameras,
@@ -502,7 +505,10 @@ __all__ = [
     "V1",
     # Discovery
     "DiscoveredCamera",
+    "DiscoveredSensor",
+    "RegisteredSensorInfo",
     "DiscoveryProvider",
+    "SensorDiscoveryProvider",
     # Manager
     "LoggerService",
     "DeviceManager",

@@ -53,6 +53,8 @@ export enum PluginInterface {
   ClipDetection = 'ClipDetection',
   /** Implements DiscoveryProvider (network scan + adoption). Only valid for camera-controlling roles. */
   DiscoveryProvider = 'DiscoveryProvider',
+  /** Implements SensorDiscoveryProvider (external sensor inventory the user adopts from). */
+  SensorDiscovery = 'SensorDiscovery',
   /** Implements NVRInterface (events and recordings). Exactly one plugin per host fills this role at runtime. */
   NVR = 'NVR',
   /** Implements NotifierInterface, so the NotificationManager can dispatch notifications to this plugin. */

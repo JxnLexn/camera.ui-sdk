@@ -40,6 +40,7 @@ from .interfaces import (
     ObjectDetectionInterface,
     ObjectDetectionPluginResponse,
     PluginInterfaces,
+    SensorDiscoveryProvider,
 )
 from .notifier import (
     Notification,
@@ -84,6 +85,7 @@ __all__ = [
     "PluginAPI",
     "BasePlugin",
     "DiscoveryProvider",
+    "SensorDiscoveryProvider",
     "MotionDetectionInterface",
     "ObjectDetectionInterface",
     "AudioDetectionInterface",

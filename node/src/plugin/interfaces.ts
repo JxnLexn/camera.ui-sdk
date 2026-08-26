@@ -1,5 +1,5 @@
 import type { CameraConfig, CameraDevice } from '../camera/index.js';
-import type { DiscoveredCamera } from '../manager/index.js';
+import type { DiscoveredCamera, DiscoveredSensor } from '../manager/index.js';
 import type { AudioFrameData } from '../sensor/audio.js';
 import type { ClassifierDetection } from '../sensor/classifier.js';
 import type { ClipEmbedding } from '../sensor/clip.js';
@@ -238,6 +238,41 @@ export interface DiscoveryProvider {
 }
 
 /**
+ * Implemented by sensor-providing plugins that face an external inventory
+ * (Home Assistant entities, vendor accessories) the user should pick from
+ * instead of the plugin importing everything. Discovered sensors are listed
+ * on the Sensors page; adoption and release are the plugin's to persist, so
+ * an adopted sensor re-registers on every start through the normal
+ * `sensorManager.addSensor()` path.
+ */
+export interface SensorDiscoveryProvider {
+  /**
+   * Return the sensors the plugin can currently offer for adoption. Called
+   * by the host on demand (Sensors page load / refresh); already-registered
+   * sensors must not be included.
+   *
+   * @returns Sensors currently discoverable by this plugin.
+   */
+  onDiscoverSensors(): Promise<DiscoveredSensor[]>;
+
+  /**
+   * Adopt a discovered sensor: persist the choice and register the sensor.
+   * From then on the plugin registers it on every start until it is released.
+   *
+   * @param sensor - The discovered sensor the user confirmed in the UI.
+   */
+  onAdoptSensor(sensor: DiscoveredSensor): Promise<void>;
+
+  /**
+   * Release a previously adopted sensor: forget the choice and unregister it.
+   * Called when the user removes the sensor in the UI.
+   *
+   * @param discoveredId - The `DiscoveredSensor.id` the adoption used.
+   */
+  onReleaseSensor(discoveredId: string): Promise<void>;
+}
+
+/**
  * Implemented by plugins that perform video-based motion detection. The host
  * invokes `testMotionDetection()` from the UI test panel and `detectMotion()`
  * from automation / benchmark pipelines.
@@ -354,5 +389,6 @@ export type PluginInterfaces = Partial<
   ClassifierDetectionInterface &
   ClipDetectionInterface &
   DiscoveryProvider &
+  SensorDiscoveryProvider &
   NotifierInterface
 >;

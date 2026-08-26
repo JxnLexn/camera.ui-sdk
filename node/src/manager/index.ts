@@ -3,7 +3,7 @@ import type { Observable } from '../observable/index.js';
 import type { PluginInfo, PluginInterface } from '../plugin/contract.js';
 import type { BasePlugin, PluginInterfaces } from '../plugin/interfaces.js';
 import type { Notification } from '../plugin/notifier.js';
-import type { Sensor } from '../sensor/base.js';
+import type { Sensor, SensorType } from '../sensor/base.js';
 
 /** One recorded change of one sensor property. */
 export interface SensorHistoryEntry {
@@ -148,6 +148,20 @@ export interface DeviceManager {
   getCamera(cameraIdOrName: string): Promise<CameraDevice | undefined>;
 }
 
+/** Persisted registry record of a sensor this plugin registered, see SensorManager.getRegisteredSensors. */
+export interface RegisteredSensorInfo {
+  /** Persistent registry id. */
+  id: string;
+  /** The nativeId the sensor was registered with, when it had one. */
+  nativeId?: string;
+  /** Sensor type. */
+  type: SensorType;
+  /** Sensor name at registration. */
+  name: string;
+  /** True while a live sensor instance backs the record. */
+  connected: boolean;
+}
+
 /**
  * Sensor manager for standalone sensors: devices that are not part of a
  * camera's hardware (smart plugs, imported smart-home devices, hubs).
@@ -192,6 +206,15 @@ export interface SensorManager {
    * @returns Sensor instances owned by this plugin
    */
   getSensors(): Sensor<any, any, any>[];
+
+  /**
+   * Get the sensors of this plugin the host has persisted, including ones
+   * from earlier runs that are not registered in this session. Lets a
+   * provider reconcile an external inventory against what already exists.
+   *
+   * @returns Persisted sensor records owned by this plugin
+   */
+  getRegisteredSensors(): Promise<RegisteredSensorInfo[]>;
 
   /**
    * Get what a set of sensors did during a window of time.
@@ -380,4 +403,20 @@ export interface DiscoveredCamera {
   model?: string;
   /** Network address (IP or hostname) shown in the UI to disambiguate same-model cameras. */
   address?: string;
+}
+
+/** A sensor a plugin can offer for adoption (see SensorDiscoveryProvider). */
+export interface DiscoveredSensor {
+  /** Stable identifier within the plugin (e.g. the source system's entity id). Used for deduplication and adoption. */
+  id: string;
+  /** Display name shown in the UI adoption list. */
+  name: string;
+  /** Sensor type the plugin would register the sensor as. */
+  type: SensorType;
+  /** Room or area label from the source system (optional). */
+  room?: string;
+  /** Manufacturer label (optional). */
+  manufacturer?: string;
+  /** Model label (optional). */
+  model?: string;
 }

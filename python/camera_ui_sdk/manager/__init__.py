@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ..observable import Observable
     from ..plugin import BasePlugin, PluginInfo, PluginInterface
     from ..plugin.notifier import Notification
-    from ..sensor.base import Sensor
+    from ..sensor.base import Sensor, SensorType
 
 
 class CoreManagerEvent(TypedDict):
@@ -191,6 +191,17 @@ class SensorManager(Protocol):
         """
         ...
 
+    async def getRegisteredSensors(self) -> list[RegisteredSensorInfo]:
+        """
+        Get the sensors of this plugin the host has persisted, including ones
+        from earlier runs that are not registered in this session. Lets a
+        provider reconcile an external inventory against what already exists.
+
+        Returns:
+            Persisted sensor records owned by this plugin
+        """
+        ...
+
     async def getSensorHistory(self, sensorIds: list[str], start: int, end: int) -> list[SensorHistoryEntry]:
         """
         Get what a set of sensors did during a window of time.
@@ -289,6 +300,47 @@ class DiscoveredCamera(TypedDict):
 
     address: NotRequired[str]
     """Network address (IP or hostname) shown in the UI to disambiguate same-model cameras."""
+
+
+class DiscoveredSensor(TypedDict):
+    """A sensor a plugin can offer for adoption (see ``SensorDiscoveryProvider``)."""
+
+    id: str
+    """Stable identifier within the plugin (e.g. the source system's entity id). Used for deduplication and adoption."""
+
+    name: str
+    """Display name shown in the UI adoption list."""
+
+    type: SensorType
+    """Sensor type the plugin would register the sensor as."""
+
+    room: NotRequired[str]
+    """Room or area label from the source system (optional)."""
+
+    manufacturer: NotRequired[str]
+    """Manufacturer label (optional)."""
+
+    model: NotRequired[str]
+    """Model label (optional)."""
+
+
+class RegisteredSensorInfo(TypedDict):
+    """Persisted registry record of a sensor this plugin registered, see ``SensorManager.getRegisteredSensors``."""
+
+    id: str
+    """Persistent registry id."""
+
+    nativeId: NotRequired[str]
+    """The nativeId the sensor was registered with, when it had one."""
+
+    type: SensorType
+    """Sensor type."""
+
+    name: str
+    """Sensor name at registration."""
+
+    connected: bool
+    """True while a live sensor instance backs the record."""
 
 
 class CreateDownloadOptions(TypedDict):

@@ -67,6 +67,9 @@ class PluginInterface(StrEnum):
     DiscoveryProvider = "DiscoveryProvider"
     """Implements DiscoveryProvider (network scan + adoption). Only valid for camera-controlling roles."""
 
+    SensorDiscovery = "SensorDiscovery"
+    """Implements SensorDiscoveryProvider (external sensor inventory the user adopts from)."""
+
     NVR = "NVR"
     """Implements NVRInterface (events and recordings). Exactly one plugin per host fills this role at runtime."""
 

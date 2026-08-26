@@ -23,7 +23,7 @@ from .api import PluginAPI
 
 if TYPE_CHECKING:
     from ..camera import CameraConfig, CameraDevice
-    from ..manager import DiscoveredCamera
+    from ..manager import DiscoveredCamera, DiscoveredSensor
     from ..sensor.base import SensorLike
     from ..storage import DeviceStorage, JsonSchemaWithoutCallbacks
     from ..types import LoggerService
@@ -295,6 +295,45 @@ class DiscoveryProvider(Protocol):
 
         Returns:
             Final camera configuration for the host to persist.
+        """
+        ...
+
+
+@runtime_checkable
+class SensorDiscoveryProvider(Protocol):
+    """Implemented by sensor-providing plugins that face an external inventory
+    (Home Assistant entities, vendor accessories) the user should pick from
+    instead of the plugin importing everything. Discovered sensors are listed
+    on the Sensors page; adoption and release are the plugin's to persist, so
+    an adopted sensor re-registers on every start through the normal
+    ``sensorManager.addSensor()`` path."""
+
+    async def onDiscoverSensors(self) -> list[DiscoveredSensor]:
+        """Return the sensors the plugin can currently offer for adoption.
+        Called by the host on demand (Sensors page load / refresh);
+        already-registered sensors must not be included.
+
+        Returns:
+            Sensors currently discoverable by this plugin.
+        """
+        ...
+
+    async def onAdoptSensor(self, sensor: DiscoveredSensor) -> None:
+        """Adopt a discovered sensor: persist the choice and register the
+        sensor. From then on the plugin registers it on every start until it
+        is released.
+
+        Args:
+            sensor: The discovered sensor the user confirmed in the UI.
+        """
+        ...
+
+    async def onReleaseSensor(self, discoveredId: str) -> None:
+        """Release a previously adopted sensor: forget the choice and
+        unregister it. Called when the user removes the sensor in the UI.
+
+        Args:
+            discoveredId: The ``DiscoveredSensor.id`` the adoption used.
         """
         ...
 
