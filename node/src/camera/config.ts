@@ -33,6 +33,8 @@ export interface CameraInput {
   preload: boolean;
   /** Strip the audio track from this source (defaults to false). */
   muted?: boolean;
+  /** Drop the talk channel of this source, so clients get no microphone (defaults to false). */
+  backchannelDisabled?: boolean;
   /** Generated streaming URLs. */
   urls: StreamUrls;
   /** Probed video codec of this source. Filled by the server once the stream has been probed; absent until then. */

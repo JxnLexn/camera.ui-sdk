@@ -17,6 +17,8 @@ export interface CameraInputSettings {
   preload: boolean;
   /** Strip the audio track from this source (defaults to false). */
   muted?: boolean;
+  /** Drop the talk channel of this source, so clients get no microphone (defaults to false). */
+  backchannelDisabled?: boolean;
   /** User-provided stream URLs. */
   urls: string[];
   /** Child source ID (for snapshot fallback). */

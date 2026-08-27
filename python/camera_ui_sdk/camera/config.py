@@ -58,6 +58,8 @@ class CameraInput(TypedDict):
     """Keep a keyframe cache for this source, so the view opens faster. Use hotMode to keep the stream connected."""
     muted: NotRequired[bool]
     """Strip the audio track from this source (defaults to False)."""
+    backchannelDisabled: NotRequired[bool]
+    """Drop the talk channel of this source, so clients get no microphone (defaults to False)."""
     urls: StreamUrls
     """Generated streaming URLs."""
     videoCodec: NotRequired[VideoCodec]
@@ -85,6 +87,8 @@ class CameraConfigInputSettings(TypedDict):
     """Keep a keyframe cache for this source, so the view opens faster. Use hotMode to keep the stream connected."""
     muted: NotRequired[bool]
     """Strip the audio track from this source (defaults to False)."""
+    backchannelDisabled: NotRequired[bool]
+    """Drop the talk channel of this source, so clients get no microphone (defaults to False)."""
     childSourceId: NotRequired[str]
     """Child source ID (for snapshot fallback)."""
     urls: NotRequired[list[str]]
