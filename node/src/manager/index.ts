@@ -3,7 +3,7 @@ import type { Observable } from '../observable/index.js';
 import type { PluginInfo, PluginInterface } from '../plugin/contract.js';
 import type { BasePlugin, PluginInterfaces } from '../plugin/interfaces.js';
 import type { Notification } from '../plugin/notifier.js';
-import type { Sensor, SensorType } from '../sensor/base.js';
+import type { SensorType } from '../sensor/base.js';
 
 /** One recorded change of one sensor property. */
 export interface SensorHistoryEntry {
@@ -148,74 +148,14 @@ export interface DeviceManager {
   getCamera(cameraIdOrName: string): Promise<CameraDevice | undefined>;
 }
 
-/** Persisted registry record of a sensor this plugin registered, see SensorManager.getRegisteredSensors. */
-export interface RegisteredSensorInfo {
-  /** Persistent registry id. */
-  id: string;
-  /** The nativeId the sensor was registered with, when it had one. */
-  nativeId?: string;
-  /** Sensor type. */
-  type: SensorType;
-  /** Sensor name at registration. */
-  name: string;
-  /** True while a live sensor instance backs the record. */
-  connected: boolean;
-}
-
 /**
- * Sensor manager for standalone sensors: devices that are not part of a
- * camera's hardware (smart plugs, imported smart-home devices, hubs).
+ * Read access to the host's sensor registry, via `api.sensorManager`.
  *
- * The host persists each sensor as its own entity: the user assigns it to
- * cameras, renames it and decides whether it is exported or not.
- * Sensors that belong to a camera's hardware are registered via
- * `camera.addSensor()` instead.
- *
- * Accessed via `api.sensorManager` in plugins.
- *
- * @example
- * ```typescript
- * const lock = new LockControl('Front Door', { nativeId: 'lock.front_door' });
- * await api.sensorManager.addSensor(lock);
- * ```
+ * Sensors are never created here: a camera's own sensors go through
+ * `camera.addSensor()`, standalone sensors exist only once the user adopted
+ * them from a `SensorDiscoveryProvider`.
  */
 export interface SensorManager {
-  /**
-   * Register a standalone sensor with the host.
-   *
-   * The host reconciles it against the persisted entity by
-   * `(pluginId, nativeId)`, or by `(type, name)` when no nativeId is set, and
-   * replaces the sensor's provisional `id` with the persistent entity id.
-   * Camera assignment is the user's decision and happens in the UI.
-   *
-   * @param sensor - Sensor instance to register
-   */
-  addSensor(sensor: Sensor<any, any, any>): Promise<void>;
-
-  /**
-   * Unregister a sensor. The persisted entity stays (shows disconnected)
-   * unless the user deletes it in the UI.
-   *
-   * @param sensor - Sensor instance to unregister
-   */
-  removeSensor(sensor: Sensor<any, any, any>): Promise<void>;
-
-  /**
-   * Get all sensors this plugin has registered in this session.
-   *
-   * @returns Sensor instances owned by this plugin
-   */
-  getSensors(): Sensor<any, any, any>[];
-
-  /**
-   * Get the sensors of this plugin the host has persisted, including ones
-   * from earlier runs that are not registered in this session. Lets a
-   * provider reconcile an external inventory against what already exists.
-   *
-   * @returns Persisted sensor records owned by this plugin
-   */
-  getRegisteredSensors(): Promise<RegisteredSensorInfo[]>;
-
   /**
    * Get what a set of sensors did during a window of time.
    *
@@ -407,8 +347,17 @@ export interface DiscoveredCamera {
 
 /** A sensor a plugin can offer for adoption (see SensorDiscoveryProvider). */
 export interface DiscoveredSensor {
-  /** Stable identifier within the plugin (e.g. the source system's entity id). Used for deduplication and adoption. */
+  /**
+   * The source's stable identity for this sensor, never its address: a Home
+   * Assistant entity-registry id, an MQTT `unique_id`, a vendor device id.
+   * It becomes the sensor's `nativeId`, and a sensor keeps its record,
+   * assignments and history for as long as this id stays the same. Using a
+   * mutable address (a Home Assistant `entity_id`) here turns every rename at
+   * the source into an orphan plus a new sensor.
+   */
   id: string;
+  /** Current address at the source (e.g. a Home Assistant entity id), shown next to the name. */
+  address?: string;
   /** Display name shown in the UI adoption list. */
   name: string;
   /** Sensor type the plugin would register the sensor as. */
@@ -419,4 +368,18 @@ export interface DiscoveredSensor {
   manufacturer?: string;
   /** Model label (optional). */
   model?: string;
+}
+
+/** A sensor the user adopted; what the host hands a `SensorDiscoveryProvider` to build its runtime sensor from. */
+export interface AdoptedSensor {
+  /** Persistent registry id, the sensor's `id` once bound. */
+  id: string;
+  /** The `DiscoveredSensor.id` the adoption used. */
+  nativeId: string;
+  /** Last known address at the source, if any. */
+  address?: string;
+  /** Name at adoption time; the user may have renamed the sensor since. */
+  name: string;
+  /** Sensor type the plugin offered it as. */
+  type: SensorType;
 }

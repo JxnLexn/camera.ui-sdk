@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, NotRequired, TypeAlias, TypedDict
 
 if TYPE_CHECKING:
     from ..sensor.audio import AudioProperty
-    from ..sensor.base import SensorCategory, SensorType
+    from ..sensor.base import SensorCategory, SensorSourceState, SensorType
     from ..sensor.battery import BatteryCapability, BatteryProperty
     from ..sensor.classifier import ClassifierProperty
     from ..sensor.contact import ContactProperty
@@ -77,6 +77,17 @@ CapabilityUpdateFn = Callable[[list[str]], None]
 """Receives the full capability list whenever it changes."""
 
 
+class SensorSourcePatch(TypedDict):
+    """Source fields a sensor reports to the registry, only the changed ones."""
+
+    sourceState: NotRequired[SensorSourceState]
+    address: NotRequired[str]
+
+
+SourceUpdateFn = Callable[[SensorSourcePatch], None]
+"""Receives a source patch, one call per ``setSourceState`` / ``setAddress``."""
+
+
 class SensorJSON(TypedDict):
     """JSON-serializable representation of a sensor for RPC transport."""
 
@@ -91,13 +102,9 @@ class SensorJSON(TypedDict):
     category: SensorCategory
     """Category the sensor belongs to."""
     nativeId: NotRequired[str]
+    """Device ID assigned by the plugin."""
     origin: NotRequired[str]
     """Source system the sensor was imported from, e.g. ``'homeassistant'``."""
-    exposed: NotRequired[bool]
-    """Initial export state on first creation; the user's later choice wins."""
-    hidden: NotRequired[bool]
-    """Initial hidden state on first creation; the user's later choice wins."""
-    """Device ID assigned by the plugin."""
     pluginId: NotRequired[str]
     """Plugin that owns the sensor."""
     properties: dict[str, Any]
@@ -108,3 +115,7 @@ class SensorJSON(TypedDict):
     """Sensor needs a frame feed to work."""
     modelSpec: NotRequired[ModelSpec]
     """Model the sensor runs, for ML-backed sensors."""
+    sourceState: NotRequired[SensorSourceState]
+    """The plugin's view of the source behind an adopted sensor."""
+    address: NotRequired[str]
+    """Current address at the source, e.g. a Home Assistant entity id."""

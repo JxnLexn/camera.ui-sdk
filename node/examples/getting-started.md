@@ -126,12 +126,10 @@ Things to internalize:
 
 A sensor is the smallest smart-home unit in camera.ui. Detection sensors push results from analyzing video; control sensors expose user-toggleable hardware (lights, sirens, locks); event sensors fire one-shot triggers (doorbell).
 
-Every sensor is a persisted entity of its own. The plugin supplies the durable identity, everything else belongs to the user: camera assignments, display name and whether the sensor is exported to consumers. There are two ways to register one:
+Every sensor is a persisted entity of its own. The plugin supplies the durable identity, everything else belongs to the user: camera assignments, display name and whether the sensor is exported to consumers. Where a sensor comes from decides who owns it:
 
-- **`camera.addSensor(sensor)`** — the sensor belongs to this camera's hardware (spotlight, siren, battery, PTZ). The host locks the assignment to the camera; users cannot re-assign it.
-- **`api.sensorManager.addSensor(sensor)`** — standalone device (smart plug, hub, imported smart-home device). The user assigns it to zero or more cameras in the UI.
-
-Either way, pass a `nativeId` (e.g. the upstream device id) in the constructor options so the host can reconcile the sensor across restarts by `(pluginId, nativeId)`. Without it, identity falls back to `(type, name)` and a rename creates a new sensor.
+- **`camera.addSensor(sensor)`** — the sensor belongs to this camera's hardware (spotlight, siren, battery, PTZ). The host locks the assignment to the camera; users cannot re-assign it. Pass a `nativeId` (e.g. the upstream device id) in the constructor options so the host can reconcile the sensor across restarts by `(pluginId, nativeId)`. Without it, identity falls back to `(type, name)` and a rename creates a new sensor.
+- **Standalone sensors** (smart plugs, hubs, smart-home entities) — the plugin never registers these. One exists once the user adopted it from what the plugin offers, and the host hands it back to the plugin on every start through the `SensorDiscoveryProvider` hooks (see 6.4). The user assigns it to zero or more cameras in the UI.
 
 For detection, subclass the matching `*DetectorSensor` and implement the detect method. The host pushes one frame at the configured rate:
 
@@ -160,13 +158,15 @@ await camera.addSensor(sensor);
 
 Other detector base classes follow the same shape but expect a batch (`frames: VideoFrameData[]`) and an abstract `modelSpec` getter: `ObjectDetectorSensor` (`detectObjects(frame)` — singular here), `FaceDetectorSensor.detectFaces(frames)`, `LicensePlateDetectorSensor.detectLicensePlates(frames)`, `AudioDetectorSensor.detectAudio(audio)`, `ClassifierDetectorSensor.detectClassifications(frames)`, `ClipDetectorSensor.detectEmbeddings(frames)`. Smart-home sensors expose semantic methods instead — e.g. `LightControl` gives you `setOn()` / `setOff()` / `setBrightness(value)`, `ContactSensor` gives you `setDetected(value)`, `DoorbellTrigger` gives you `trigger()`. You construct them, register them, and then call those methods when your hardware reports a change.
 
-A standalone sensor works exactly the same, it just goes through the sensor manager instead of a camera:
+A standalone sensor works exactly the same once it runs, only nobody registers it: you build it from the adopted record the host hands you and return it, and the host binds it to the record by `nativeId`:
 
 ```ts
 import { LockControl } from '@camera.ui/sdk';
+import type { AdoptedSensor } from '@camera.ui/sdk';
 
-const lock = new LockControl('Front Door', { nativeId: 'lock.front_door' });
-await api.sensorManager.addSensor(lock);
+async onSensorAdopted(record: AdoptedSensor) {
+  return new LockControl(record.name, { nativeId: record.nativeId, address: record.address });
+}
 ```
 
 Every sensor also has a lifecycle pair: `onStart()` runs once the sensor is registered and its storage is ready — start pollers, subscriptions, timers there. `onStop()` is the counterpart and runs on removal, plugin shutdown and cleanup:
@@ -467,6 +467,69 @@ export default class MotionPlugin extends BasePlugin implements MotionDetectionI
 The image-based detection interfaces (`ObjectDetectionInterface`, `FaceDetectionInterface`, `LicensePlateDetectionInterface`, `ClassifierDetectionInterface`, `ClipDetectionInterface`) take an extra `metadata: ImageMetadata` argument with `width` / `height`. The audio interface takes `metadata: AudioMetadata` with the `mimeType`. Otherwise the wiring is identical to the motion example above — add the matching `PluginInterface.X` flag to the contract and implement the `test*` / optional `detect*` / optional settings trio.
 
 A detection plugin almost always implements both halves: the appropriate `*DetectorSensor` subclass (Section 4) for the live pipeline, AND the matching `*DetectionInterface` here for UI test dialogs and ad-hoc benchmarks.
+
+### 6.4 SensorDiscoveryProvider
+
+Let users pick sensors from an inventory the plugin faces (Home Assistant entities, a vendor account) instead of importing all of it. List `PluginInterface.SensorDiscovery` in the contract. The host owns the adoption: it lists what you discover on the Sensors page, creates the record when the user adopts, hands you your adopted sensors on every start and tells you when the user deletes one. The plugin keeps no list of its own and persists nothing about adoption.
+
+Four methods:
+
+- `onDiscoverSensors` returns everything the source currently offers. Don't drop what is already adopted, the host filters.
+- `configureAdoptedSensors` runs once at startup, right after `configureCameras`, with every record the user adopted from this plugin. Return one sensor per record, always, built from the record's `type` and `name` with `nativeId: record.nativeId`; that is what the host binds by. A record the source no longer knows still gets its sensor, marked `setSourceState('removed')`.
+- `onSensorAdopted` runs when the user adopts a discovered sensor. Same as one entry of `configureAdoptedSensors`.
+- `onSensorUnadopted` runs after the user deleted the sensor. The host has already unbound it, drop what you still hold.
+
+Identity is the source's stable id, never its address. `DiscoveredSensor.id` becomes the record's `nativeId`, and the sensor keeps its record, assignments, automations and history for as long as that id stays the same. A Home Assistant entity-registry id or an MQTT `unique_id` qualifies; an `entity_id` does not, it changes on rename and would leave an orphan plus a new sensor behind. Carry the mutable address in `address`, it is shown next to the name.
+
+The sensor reports its source on itself: `setSourceState('connected' | 'unavailable' | 'removed')`, and `setAddress(address)` after a rename. Neither deletes anything. An adopted sensor is deleted by the user only.
+
+```ts
+import { BasePlugin, ContactSensor, LockControl, SensorType } from '@camera.ui/sdk';
+import type { AdoptedSensor, DiscoveredSensor, Sensor, SensorDiscoveryProvider } from '@camera.ui/sdk';
+
+export default class SmartHome extends BasePlugin implements SensorDiscoveryProvider {
+  private sensors = new Map<string, Sensor<any>>();
+
+  async onDiscoverSensors(): Promise<DiscoveredSensor[]> {
+    const entities = await this.hub.listEntities();
+    return entities.map((e) => ({
+      id: e.registryId, // stable, survives a rename
+      address: e.entityId, // mutable, display only
+      name: e.name,
+      type: e.domain === 'lock' ? SensorType.Lock : SensorType.Contact,
+      room: e.area,
+    }));
+  }
+
+  async configureAdoptedSensors(records: AdoptedSensor[]): Promise<Sensor<any>[]> {
+    return records.map((record) => this.build(record));
+  }
+
+  async onSensorAdopted(record: AdoptedSensor): Promise<Sensor<any>> {
+    return this.build(record);
+  }
+
+  async onSensorUnadopted(nativeId: string): Promise<void> {
+    this.sensors.delete(nativeId);
+  }
+
+  private build(record: AdoptedSensor): Sensor<any> {
+    const sensor = record.type === SensorType.Lock
+      ? new LockControl(record.name, { nativeId: record.nativeId, address: record.address })
+      : new ContactSensor(record.name, { nativeId: record.nativeId, address: record.address });
+    this.sensors.set(record.nativeId, sensor);
+    this.hub.watch(record.nativeId, (entity) => {
+      if (!entity) {
+        sensor.setSourceState('removed');
+        return;
+      }
+      sensor.setAddress(entity.entityId);
+      sensor.setSourceState(entity.available ? 'connected' : 'unavailable');
+    });
+    return sensor;
+  }
+}
+```
 
 ## 7. Logging
 

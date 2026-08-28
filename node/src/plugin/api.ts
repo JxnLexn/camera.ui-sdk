@@ -32,7 +32,7 @@ export interface PluginAPI {
   readonly coreManager: CoreManager;
   /** Owns the camera devices assigned to this plugin and publishes camera-state changes. */
   readonly deviceManager: DeviceManager;
-  /** Registers standalone sensors: entities of their own, persisted across restarts, assignable to cameras by the user. */
+  /** Read access to the sensor registry (history). Standalone sensors are adopted by the user, not registered here. */
   readonly sensorManager: SensorManager;
   /** Mints token-protected download URLs for files the plugin exposes to the UI (clip exports, snapshots). */
   readonly downloadManager: DownloadManager;

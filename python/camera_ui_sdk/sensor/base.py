@@ -9,6 +9,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Generic,
+    Literal,
     Protocol,
     TypedDict,
     TypeVar,
@@ -20,12 +21,19 @@ from ..internal.sensor_rpc import (
     CapabilityUpdateFn,
     PropertyUpdateFn,
     SensorJSON,
+    SourceUpdateFn,
 )
 from ..internal.shared_utils import is_equal
 from ..observable import Observable, Subject
 
 if TYPE_CHECKING:
     from ..storage import DeviceStorage, JsonSchema
+
+SensorSourceState = Literal["connected", "unavailable", "removed"]
+"""The plugin's view of the source behind an adopted sensor. ``unavailable``
+means wait (source unreachable, entity temporarily unavailable), ``removed``
+means the source reported the entity gone while it was reachable. Neither
+deletes the sensor: an adopted sensor is deleted by the user only."""
 
 
 class SensorType(StrEnum):
@@ -272,15 +280,14 @@ class Sensor(ABC, Generic[TProperties, TStorage, TCapability]):
         *,
         native_id: str | None = None,
         origin: str | None = None,
-        exposed: bool | None = None,
-        hidden: bool | None = None,
+        address: str | None = None,
     ) -> None:
         self._name = name
         self._id = str(uuid4())  # provisional id, replaced by the host's persistent id at registration
         self._native_id = native_id
         self._origin = origin
-        self._initial_exposed = exposed
-        self._initial_hidden = hidden
+        self._source_state: SensorSourceState | None = None
+        self._address = address
         self._display_name = name
         self._plugin_id: str | None = None
         self._assigned_camera_ids: list[str] = []
@@ -293,6 +300,7 @@ class Sensor(ABC, Generic[TProperties, TStorage, TCapability]):
 
         self._update_fn: PropertyUpdateFn | None = None
         self._capabilities_change_fn: Callable[[list[str]], None] | None = None
+        self._source_update_fn: SourceUpdateFn | None = None
         self._storage: DeviceStorage[TStorage] | None = None
         self._registered: bool = False
         self._active: bool = False
@@ -316,6 +324,14 @@ class Sensor(ABC, Generic[TProperties, TStorage, TCapability]):
     @property
     def nativeId(self) -> str | None:
         return self._native_id
+
+    @property
+    def sourceState(self) -> SensorSourceState | None:
+        return self._source_state
+
+    @property
+    def address(self) -> str | None:
+        return self._address
 
     @property
     def name(self) -> str:
@@ -434,6 +450,43 @@ class Sensor(ABC, Generic[TProperties, TStorage, TCapability]):
         """
         return None
 
+    def setSourceState(self, state: SensorSourceState) -> None:
+        """Report what the source behind this sensor looks like right now. The
+        host shows the state with its reason on the sensors page and never
+        deletes on it. Only meaningful for adopted sensors.
+
+        Args:
+            state: Current source state.
+
+        Example:
+            ```python
+            sensor.setSourceState("connected" if registry_has_entity else "removed")
+            ```
+        """
+        if self._source_state == state:
+            return
+        self._source_state = state
+        if self._source_update_fn:
+            self._source_update_fn({"sourceState": state})
+
+    def setAddress(self, address: str) -> None:
+        """Report the sensor's current address at the source, e.g. after a Home
+        Assistant entity was renamed. The identity (``nativeId``) stays.
+
+        Args:
+            address: Current address at the source.
+
+        Example:
+            ```python
+            sensor.setAddress(entry["entity_id"])
+            ```
+        """
+        if self._address == address:
+            return
+        self._address = address
+        if self._source_update_fn:
+            self._source_update_fn({"address": address})
+
     def toJSON(self) -> SensorJSON:
         """Serialize this sensor to a JSON-safe dict for RPC transport."""
         result: SensorJSON = {
@@ -450,12 +503,12 @@ class Sensor(ABC, Generic[TProperties, TStorage, TCapability]):
             result["nativeId"] = self._native_id
         if self._origin:
             result["origin"] = self._origin
-        if self._initial_exposed is not None:
-            result["exposed"] = self._initial_exposed
-        if self._initial_hidden is not None:
-            result["hidden"] = self._initial_hidden
         if self._plugin_id:
             result["pluginId"] = self._plugin_id
+        if self._source_state:
+            result["sourceState"] = self._source_state
+        if self._address:
+            result["address"] = self._address
         return result
 
     def getValue(self, property: str) -> Any | None:
@@ -654,6 +707,9 @@ class Sensor(ABC, Generic[TProperties, TStorage, TCapability]):
     def _initCapabilities(self, update_fn: CapabilityUpdateFn) -> None:
         self._capabilities_change_fn = update_fn
 
+    def _initSource(self, update_fn: SourceUpdateFn) -> None:
+        self._source_update_fn = update_fn
+
     def _cleanup(self) -> None:
         # pair on_stop even when the sensor is force-removed without teardown
         if self._active:
@@ -662,6 +718,7 @@ class Sensor(ABC, Generic[TProperties, TStorage, TCapability]):
 
         self._update_fn = None
         self._capabilities_change_fn = None
+        self._source_update_fn = None
         self._storage = None
         self._registered = False
         self._assigned_camera_ids = []

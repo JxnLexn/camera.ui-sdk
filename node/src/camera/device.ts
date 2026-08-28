@@ -187,8 +187,9 @@ export interface CameraDevice {
    * The host assigns it to this camera and reconciles it across restarts like a standalone sensor.
    *
    * Registering here declares "this sensor belongs to this camera and no other":
-   * the assignment is locked, users cannot re-assign it. For sensors the user
-   * should assign freely, register via `sensorManager.addSensor()` instead.
+   * the assignment is locked, users cannot re-assign it. Sensors the user
+   * should assign freely are standalone: they exist once the user adopted them
+   * from a `SensorDiscoveryProvider`, a plugin never registers them itself.
    *
    * @param sensor - Sensor instance to register
    */

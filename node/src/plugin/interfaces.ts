@@ -1,9 +1,9 @@
 import type { CameraConfig, CameraDevice } from '../camera/index.js';
-import type { DiscoveredCamera, DiscoveredSensor } from '../manager/index.js';
+import type { AdoptedSensor, DiscoveredCamera, DiscoveredSensor } from '../manager/index.js';
 import type { AudioFrameData } from '../sensor/audio.js';
 import type { ClassifierDetection } from '../sensor/classifier.js';
 import type { ClipEmbedding } from '../sensor/clip.js';
-import type { SensorLike } from '../sensor/base.js';
+import type { Sensor, SensorLike } from '../sensor/base.js';
 import type { Detection, VideoFrameData } from '../sensor/detection.js';
 import type { FaceDetection } from '../sensor/face.js';
 import type { LicensePlateDetection } from '../sensor/licensePlate.js';
@@ -239,37 +239,62 @@ export interface DiscoveryProvider {
 
 /**
  * Implemented by sensor-providing plugins that face an external inventory
- * (Home Assistant entities, vendor accessories) the user should pick from
- * instead of the plugin importing everything. Discovered sensors are listed
- * on the Sensors page; adoption and release are the plugin's to persist, so
- * an adopted sensor re-registers on every start through the normal
- * `sensorManager.addSensor()` path.
+ * (Home Assistant entities, vendor accessories) the user picks from instead
+ * of the plugin importing everything. Declare `PluginInterface.SensorDiscovery`
+ * in the contract.
+ *
+ * The host owns the adoption: it lists what the plugin discovers, creates the
+ * sensor record when the user adopts, hands the plugin its adopted sensors on
+ * every start and tells it when the user deletes one. The plugin keeps no
+ * list of its own.
+ *
+ * Identity is the source's stable id (`DiscoveredSensor.id`), never an
+ * address; the same id means the same sensor across restarts and renames.
  */
 export interface SensorDiscoveryProvider {
   /**
-   * Return the sensors the plugin can currently offer for adoption. Called
-   * by the host on demand (Sensors page load / refresh); already-registered
-   * sensors must not be included.
+   * Return every sensor the source currently offers. The host drops the ones
+   * already adopted, the plugin does not filter. Called on demand (Sensors
+   * page, rescan) and on a polling schedule while the page is open.
    *
    * @returns Sensors currently discoverable by this plugin.
    */
   onDiscoverSensors(): Promise<DiscoveredSensor[]>;
 
   /**
-   * Adopt a discovered sensor: persist the choice and register the sensor.
-   * From then on the plugin registers it on every start until it is released.
+   * Called once at startup, right after `configureCameras()`, with every
+   * sensor the user adopted from this plugin. Build and return one runtime
+   * sensor per record, always, from the record's type and name alone; the
+   * host binds each returned sensor to its record by `nativeId`. Report what
+   * the source looks like on the sensor itself (`setSourceState`,
+   * `setAddress`) as soon as you know: a record the source no longer has gets
+   * `setSourceState('removed')`, it is never dropped here.
    *
-   * @param sensor - The discovered sensor the user confirmed in the UI.
+   * @param sensors - The adopted sensors of this plugin.
+   *
+   * @returns One runtime sensor per adopted record.
    */
-  onAdoptSensor(sensor: DiscoveredSensor): Promise<void>;
+  configureAdoptedSensors(sensors: AdoptedSensor[]): Promise<Sensor<any, any, any>[]>;
 
   /**
-   * Release a previously adopted sensor: forget the choice and unregister it.
-   * Called when the user removes the sensor in the UI.
+   * The user adopted a discovered sensor and the host created its record.
+   * Build and return the runtime sensor for it, same as one entry of
+   * `configureAdoptedSensors()`.
    *
-   * @param discoveredId - The `DiscoveredSensor.id` the adoption used.
+   * @param sensor - The adopted sensor.
+   *
+   * @returns The runtime sensor to bind to the record.
    */
-  onReleaseSensor(discoveredId: string): Promise<void>;
+  onSensorAdopted(sensor: AdoptedSensor): Promise<Sensor<any, any, any>>;
+
+  /**
+   * The user deleted an adopted sensor. The host has already unbound the
+   * runtime sensor; drop whatever the plugin still holds for it. The entity
+   * shows up as discovered again on the next scan.
+   *
+   * @param nativeId - The `DiscoveredSensor.id` the adoption used.
+   */
+  onSensorUnadopted(nativeId: string): Promise<void>;
 }
 
 /**

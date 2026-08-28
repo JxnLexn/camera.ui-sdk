@@ -341,9 +341,10 @@ class CameraDevice(Protocol):
         reconciles it across restarts like a standalone sensor.
 
         Registering here declares "this sensor belongs to this camera and no
-        other": the assignment is locked, users cannot re-assign it. For
-        sensors the user should assign freely, register via
-        ``sensorManager.addSensor()`` instead.
+        other": the assignment is locked, users cannot re-assign it. Sensors
+        the user should assign freely are standalone: they exist once the user
+        adopted them from a ``SensorDiscoveryProvider``, a plugin never
+        registers them itself.
 
         Args:
             sensor: Sensor instance to register.

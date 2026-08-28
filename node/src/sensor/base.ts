@@ -1,7 +1,7 @@
 import { isEqual } from '../internal/shared-utils.js';
 import { Subject } from '../observable/index.js';
 
-import type { CapabilityUpdateFn, PropertyUpdateFn, SensorJSON } from '../internal/sensor-rpc.js';
+import type { CapabilityUpdateFn, PropertyUpdateFn, SensorJSON, SourceUpdateFn } from '../internal/sensor-rpc.js';
 import type { Observable } from '../observable/index.js';
 import type { DeviceStorage, JsonSchema } from '../storage/index.js';
 import type { AudioProperty } from './audio.js';
@@ -53,11 +53,20 @@ export type SensorPropertyType =
 export type SensorCapability = PTZCapability | LightCapability | SirenCapability | BatteryCapability;
 
 /**
+ * The plugin's view of the source behind an adopted sensor. `unavailable`
+ * means wait (source unreachable, entity temporarily unavailable), `removed`
+ * means the source reported the entity gone while it was reachable. Neither
+ * deletes the sensor: an adopted sensor is deleted by the user only.
+ */
+export type SensorSourceState = 'connected' | 'unavailable' | 'removed';
+
+/**
  * Type of sensor. "Sensor" is camera.ui's umbrella term for the smallest
  * smart-home unit. It covers measuring devices and controllable ones alike. The concrete
  * classes carry the real meaning (`LightControl`, `MotionSensor`, ...).
- * Plugins create sensors of these types, either standalone via the sensor
- * manager or attached to a camera via `camera.addSensor()`.
+ * Plugins create sensors of these types, attached to a camera via
+ * `camera.addSensor()` or handed back for an adopted record through
+ * `SensorDiscoveryProvider`.
  */
 export enum SensorType {
   // detection sensors: analyze frames and report detections
@@ -228,8 +237,9 @@ export abstract class Sensor<TProperties extends object, TStorage extends object
   private _id: string;
   private _nativeId?: string;
   private _origin?: string;
-  private _initialExposed?: boolean;
-  private _initialHidden?: boolean;
+  private _sourceState?: SensorSourceState;
+  private _address?: string;
+  private _sourceUpdateFn?: SourceUpdateFn;
   private _assignedCameraIds: string[] = [];
   private _assignmentLocked = false;
   private _pluginId?: string;
@@ -261,8 +271,7 @@ export abstract class Sensor<TProperties extends object, TStorage extends object
     this.name = name;
     this._nativeId = options?.nativeId;
     this._origin = options?.origin;
-    this._initialExposed = options?.exposed;
-    this._initialHidden = options?.hidden;
+    this._address = options?.address;
     this._propertiesStore = {} as TProperties;
   }
 
@@ -276,6 +285,14 @@ export abstract class Sensor<TProperties extends object, TStorage extends object
 
   get origin(): string | undefined {
     return this._origin;
+  }
+
+  get sourceState(): SensorSourceState | undefined {
+    return this._sourceState;
+  }
+
+  get address(): string | undefined {
+    return this._address;
   }
 
   get displayName(): string {
@@ -394,6 +411,41 @@ export abstract class Sensor<TProperties extends object, TStorage extends object
    *
    * @internal
    */
+  /**
+   * Report what the source behind this sensor looks like right now. The host
+   * shows the state with its reason on the sensors page and never deletes on
+   * it. Only meaningful for adopted sensors.
+   *
+   * @param state - Current source state
+   *
+   * @example
+   * ```typescript
+   * sensor.setSourceState(registryHasEntity ? 'connected' : 'removed');
+   * ```
+   */
+  setSourceState(state: SensorSourceState): void {
+    if (this._sourceState === state) return;
+    this._sourceState = state;
+    this._sourceUpdateFn?.({ sourceState: state });
+  }
+
+  /**
+   * Report the sensor's current address at the source, e.g. after a Home
+   * Assistant entity was renamed. The identity (`nativeId`) stays.
+   *
+   * @param address - Current address at the source
+   *
+   * @example
+   * ```typescript
+   * sensor.setAddress(entry.entity_id);
+   * ```
+   */
+  setAddress(address: string): void {
+    if (this._address === address) return;
+    this._address = address;
+    this._sourceUpdateFn?.({ address });
+  }
+
   toJSON(): SensorJSON {
     return {
       id: this.id,
@@ -403,12 +455,12 @@ export abstract class Sensor<TProperties extends object, TStorage extends object
       category: this.category,
       nativeId: this.nativeId,
       origin: this._origin,
-      exposed: this._initialExposed,
-      hidden: this._initialHidden,
       pluginId: this.pluginId,
       properties: this._getProperties() as Record<string, unknown>,
       capabilities: this._capabilities,
       requiresFrames: this._requiresFrames,
+      sourceState: this._sourceState,
+      address: this._address,
     };
   }
 
@@ -499,6 +551,10 @@ export abstract class Sensor<TProperties extends object, TStorage extends object
     this._capabilitiesUpdateFn = updateFn;
   }
 
+  _initSource(updateFn: SourceUpdateFn): void {
+    this._sourceUpdateFn = updateFn;
+  }
+
   /**
    * Flips the lifecycle state and runs the matching lifecycle hook.
    *
@@ -534,6 +590,7 @@ export abstract class Sensor<TProperties extends object, TStorage extends object
 
     this._updateFn = undefined;
     this._capabilitiesUpdateFn = undefined;
+    this._sourceUpdateFn = undefined;
     this._storage = undefined;
     this._registered = false;
     this._assignedCameraIds = [];
@@ -703,13 +760,8 @@ export interface SensorOptions {
    */
   origin?: string;
   /**
-   * Initial export state when the host creates the sensor entity. Later
-   * user changes win; re-registering never overwrites them.
+   * Current address at the source, e.g. a Home Assistant entity id. Display
+   * only, may change over time; identity is `nativeId`.
    */
-  exposed?: boolean;
-  /**
-   * Initial hidden state when the host creates the sensor entity. Later
-   * user changes win; re-registering never overwrites them.
-   */
-  hidden?: boolean;
+  address?: string;
 }

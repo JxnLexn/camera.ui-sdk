@@ -14,6 +14,7 @@ from .base import (
     SensorCategory,
     SensorLike,
     SensorPropertyChangeData,
+    SensorSourceState,
     SensorType,
 )
 from .battery import (
@@ -166,6 +167,7 @@ __all__ = [
     "SensorType",
     "SensorCategory",
     "SensorPropertyChangeData",
+    "SensorSourceState",
     "VideoInputSpec",
     "LoadedModel",
     "ModelRuntime",

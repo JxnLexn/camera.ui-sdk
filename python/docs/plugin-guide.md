@@ -142,12 +142,10 @@ Things to internalize:
 
 A sensor is the smallest smart-home unit in camera.ui. Detection sensors push results from analyzing video; control sensors expose user-toggleable hardware (lights, sirens, locks); event sensors fire one-shot triggers (doorbell).
 
-Every sensor is a persisted entity of its own. The plugin supplies the durable identity, everything else belongs to the user: camera assignments, display name and whether the sensor is exported to consumers. There are two ways to register one:
+Every sensor is a persisted entity of its own. The plugin supplies the durable identity, everything else belongs to the user: camera assignments, display name and whether the sensor is exported to consumers. Where a sensor comes from decides who owns it:
 
-- **`camera.addSensor(sensor)`** — the sensor belongs to this camera's hardware (spotlight, siren, battery, PTZ). The host locks the assignment to the camera; users cannot re-assign it.
-- **`api.sensorManager.addSensor(sensor)`** — standalone device (smart plug, hub, imported smart-home device). The user assigns it to zero or more cameras in the UI.
-
-Either way, pass a `native_id` (e.g. the upstream device id) in the constructor so the host can reconcile the sensor across restarts by `(pluginId, nativeId)`. Without it, identity falls back to `(type, name)` and a rename creates a new sensor.
+- **`camera.addSensor(sensor)`** — the sensor belongs to this camera's hardware (spotlight, siren, battery, PTZ). The host locks the assignment to the camera; users cannot re-assign it. Pass a `native_id` (e.g. the upstream device id) in the constructor so the host can reconcile the sensor across restarts by `(pluginId, nativeId)`. Without it, identity falls back to `(type, name)` and a rename creates a new sensor.
+- **Standalone sensors** (smart plugs, hubs, smart-home entities) — the plugin never registers these. One exists once the user adopted it from what the plugin offers, and the host hands it back to the plugin on every start through the `SensorDiscoveryProvider` hooks (see 6.4). The user assigns it to zero or more cameras in the UI.
 
 For detection, subclass the matching `*DetectorSensor` and implement the detect method. The host pushes one frame at the configured rate:
 
@@ -173,13 +171,13 @@ await camera.addSensor(sensor)
 
 Other detector base classes follow the same shape. `ObjectDetectorSensor.detectObjects(frame)` takes a single frame; `FaceDetectorSensor.detectFaces(frames)`, `LicensePlateDetectorSensor.detectLicensePlates(frames)`, `ClassifierDetectorSensor.detectClassifications(frames)`, `ClipDetectorSensor.detectEmbeddings(frames)` all take a batch (`list[VideoFrameData]`); `AudioDetectorSensor.detectAudio(audio)` takes one `AudioFrameData`. The frame-based detectors also expose an abstract `modelSpec` property — return the input dimensions and (for classifier) the trigger labels. Smart-home sensors expose semantic methods instead — `LightControl` gives you `setOn()` / `setOff()` / `setBrightness(value)`, `ContactSensor` gives you `setDetected(value)`, `DoorbellTrigger` gives you `trigger()`. You construct them, register them, and then call those methods when your hardware reports a change.
 
-A standalone sensor works exactly the same, it just goes through the sensor manager instead of a camera:
+A standalone sensor works exactly the same once it runs, only nobody registers it: you build it from the adopted record the host hands you and return it, and the host binds it to the record by `nativeId`:
 
 ```python
-from camera_ui_sdk import LockControl
+from camera_ui_sdk import AdoptedSensor, LockControl
 
-lock = LockControl("Front Door", native_id="lock.front_door")
-await self.api.sensorManager.addSensor(lock)
+async def onSensorAdopted(self, sensor: AdoptedSensor) -> LockControl:
+    return LockControl(sensor["name"], native_id=sensor["nativeId"], address=sensor.get("address"))
 ```
 
 Every sensor also has a lifecycle pair: `on_start()` runs once the sensor is registered and its storage is ready — start pollers, subscriptions, timers there. `on_stop()` is the counterpart and runs on removal, plugin shutdown and cleanup. Both may be plain `def` or `async def`:
@@ -501,6 +499,70 @@ class MotionPlugin(BasePlugin, MotionDetectionInterface):
 The image-based detection interfaces (`ObjectDetectionInterface`, `FaceDetectionInterface`, `LicensePlateDetectionInterface`, `ClassifierDetectionInterface`, `ClipDetectionInterface`) take an extra `metadata: ImageMetadata` argument with `width` / `height` on the `test*` method. The audio interface takes `metadata: AudioMetadata` with the `mimeType`. Otherwise the wiring is identical to the motion example above — add the matching `PluginInterface.X` flag to the contract and implement the `test*` / optional `detect*` / optional settings trio.
 
 A detection plugin almost always implements both halves: the appropriate `*DetectorSensor` subclass (Section 4) for the live pipeline, AND the matching `*DetectionInterface` here for UI test dialogs and ad-hoc benchmarks.
+
+### 6.4 SensorDiscoveryProvider
+
+Let users pick sensors from an inventory the plugin faces (Home Assistant entities, a vendor account) instead of importing all of it. List `PluginInterface.SensorDiscovery` in the contract. The host owns the adoption: it lists what you discover on the Sensors page, creates the record when the user adopts, hands you your adopted sensors on every start and tells you when the user deletes one. The plugin keeps no list of its own and persists nothing about adoption.
+
+Four methods:
+
+- `onDiscoverSensors` returns everything the source currently offers. Don't drop what is already adopted, the host filters.
+- `configureAdoptedSensors` runs once at startup, right after `configureCameras`, with every record the user adopted from this plugin. Return one sensor per record, always, built from the record's `type` and `name` with `native_id=record["nativeId"]`; that is what the host binds by. A record the source no longer knows still gets its sensor, marked `setSourceState("removed")`.
+- `onSensorAdopted` runs when the user adopts a discovered sensor. Same as one entry of `configureAdoptedSensors`.
+- `onSensorUnadopted` runs after the user deleted the sensor. The host has already unbound it, drop what you still hold.
+
+Identity is the source's stable id, never its address. `DiscoveredSensor["id"]` becomes the record's `nativeId`, and the sensor keeps its record, assignments, automations and history for as long as that id stays the same. A Home Assistant entity-registry id or an MQTT `unique_id` qualifies; an `entity_id` does not, it changes on rename and would leave an orphan plus a new sensor behind. Carry the mutable address in `address`, it is shown next to the name.
+
+The sensor reports its source on itself: `setSourceState("connected" | "unavailable" | "removed")`, and `setAddress(address)` after a rename. Neither deletes anything. An adopted sensor is deleted by the user only.
+
+```python
+from camera_ui_sdk import (
+    AdoptedSensor, BasePlugin, ContactSensor, DeviceStorage, DiscoveredSensor,
+    LockControl, LoggerService, PluginAPI, Sensor, SensorDiscoveryProvider, SensorType,
+)
+
+
+class SmartHome(BasePlugin, SensorDiscoveryProvider):
+    def __init__(self, logger: LoggerService, api: PluginAPI, storage: DeviceStorage) -> None:
+        super().__init__(logger, api, storage)
+        self.sensors: dict[str, Sensor] = {}
+
+    async def onDiscoverSensors(self) -> list[DiscoveredSensor]:
+        entities = await self.hub.list_entities()
+        return [
+            {
+                "id": e.registry_id,  # stable, survives a rename
+                "address": e.entity_id,  # mutable, display only
+                "name": e.name,
+                "type": SensorType.Lock if e.domain == "lock" else SensorType.Contact,
+                "room": e.area,
+            }
+            for e in entities
+        ]
+
+    async def configureAdoptedSensors(self, sensors: list[AdoptedSensor]) -> list[Sensor]:
+        return [self._build(record) for record in sensors]
+
+    async def onSensorAdopted(self, sensor: AdoptedSensor) -> Sensor:
+        return self._build(sensor)
+
+    async def onSensorUnadopted(self, nativeId: str) -> None:
+        self.sensors.pop(nativeId, None)
+
+    def _build(self, record: AdoptedSensor) -> Sensor:
+        cls = LockControl if record["type"] == SensorType.Lock else ContactSensor
+        sensor = cls(record["name"], native_id=record["nativeId"], address=record.get("address"))
+        self.sensors[record["nativeId"]] = sensor
+        self.hub.watch(record["nativeId"], lambda entity: self._sync(sensor, entity))
+        return sensor
+
+    def _sync(self, sensor: Sensor, entity: HubEntity | None) -> None:
+        if entity is None:
+            sensor.setSourceState("removed")
+            return
+        sensor.setAddress(entity.entity_id)
+        sensor.setSourceState("connected" if entity.available else "unavailable")
+```
 
 ## 7. Logging
 

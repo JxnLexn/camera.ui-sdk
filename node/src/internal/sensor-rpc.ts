@@ -1,4 +1,4 @@
-import type { SensorCategory, SensorPropertyType, SensorType } from '../sensor/base.js';
+import type { SensorCategory, SensorPropertyType, SensorSourceState, SensorType } from '../sensor/base.js';
 import type { ModelSpec } from '../sensor/spec.js';
 
 /** Emitted when a sensor property value changes. */
@@ -31,6 +31,13 @@ export type PropertyUpdateFn = (properties: Record<string, unknown>) => void;
  */
 export type CapabilityUpdateFn = (capabilities: string[]) => void;
 
+export interface SensorSourcePatch {
+  sourceState?: SensorSourceState;
+  address?: string;
+}
+
+export type SourceUpdateFn = (patch: SensorSourcePatch) => void;
+
 /** JSON-serializable representation of a sensor for RPC transport. */
 export interface SensorJSON {
   /** Sensor ID. */
@@ -55,10 +62,10 @@ export interface SensorJSON {
   requiresFrames?: boolean;
   /** Source system the sensor was imported from, e.g. `'homeassistant'`. */
   origin?: string;
-  /** Initial export state on first creation; the user's later choice wins. */
-  exposed?: boolean;
-  /** Initial hidden state on first creation; the user's later choice wins. */
-  hidden?: boolean;
   /** Model the sensor runs, for ML-backed sensors. */
   modelSpec?: ModelSpec;
+  /** The plugin's view of the source behind an adopted sensor. */
+  sourceState?: SensorSourceState;
+  /** Current address at the source, e.g. a Home Assistant entity id. */
+  address?: string;
 }

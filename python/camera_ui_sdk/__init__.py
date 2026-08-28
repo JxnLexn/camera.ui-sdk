@@ -77,6 +77,7 @@ from .camera import (
     ZoneType,
 )
 from .manager import (
+    AdoptedSensor,
     CoreManager,
     CoreManagerEvent,
     CreateDownloadOptions,
@@ -87,7 +88,6 @@ from .manager import (
     DownloadManager,
     DownloadToken,
     NotificationManager,
-    RegisteredSensorInfo,
     SensorHistoryEntry,
     SensorManager,
 )
@@ -232,6 +232,7 @@ from .sensor import (
     SensorCategory,
     SensorLike,
     SensorPropertyChangeData,
+    SensorSourceState,
     SensorType,
     SirenCapability,
     SirenControl,
@@ -404,6 +405,7 @@ __all__ = [
     "PTZRelativeMove",
     "ChargingState",
     "SensorPropertyChangeData",
+    "SensorSourceState",
     "Sensor",
     "SensorLike",
     "MotionSensor",
@@ -506,7 +508,7 @@ __all__ = [
     # Discovery
     "DiscoveredCamera",
     "DiscoveredSensor",
-    "RegisteredSensorInfo",
+    "AdoptedSensor",
     "DiscoveryProvider",
     "SensorDiscoveryProvider",
     # Manager

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ..observable import Observable
     from ..plugin import BasePlugin, PluginInfo, PluginInterface
     from ..plugin.notifier import Notification
-    from ..sensor.base import Sensor, SensorType
+    from ..sensor.base import SensorType
 
 
 class CoreManagerEvent(TypedDict):
@@ -141,66 +141,12 @@ class CoreManager(Protocol):
 @runtime_checkable
 class SensorManager(Protocol):
     """
-    Sensor manager for standalone sensors: devices that are not part of a
-    camera's hardware (smart plugs, imported smart-home devices, hubs).
+    Read access to the host's sensor registry, via ``api.sensorManager``.
 
-    The host persists each sensor as its own entity: the user assigns it to
-    cameras, renames it and decides whether it is exported or not.
-    Sensors that belong to a camera's hardware are registered via
-    ``camera.addSensor()`` instead.
-
-    Accessed via `api.sensorManager` in plugins.
-
-    Example:
-        ```python
-        lock = LockControl("Front Door", native_id="lock.front_door")
-        await api.sensorManager.addSensor(lock)
-        ```
+    Sensors are never created here: a camera's own sensors go through
+    ``camera.addSensor()``, standalone sensors exist only once the user adopted
+    them from a ``SensorDiscoveryProvider``.
     """
-
-    async def addSensor(self, sensor: Sensor[Any, Any, Any]) -> None:
-        """
-        Register a standalone sensor with the host.
-
-        The host reconciles it against the persisted entity by
-        ``(pluginId, nativeId)``, or by ``(type, name)`` when no native_id is
-        set, and replaces the sensor's provisional ``id`` with the persistent
-        entity id. Camera assignment is the user's decision and happens in the UI.
-
-        Args:
-            sensor: Sensor instance to register
-        """
-        ...
-
-    async def removeSensor(self, sensor: Sensor[Any, Any, Any]) -> None:
-        """
-        Unregister a sensor. The persisted entity stays (shows disconnected)
-        unless the user deletes it in the UI.
-
-        Args:
-            sensor: Sensor instance to unregister
-        """
-        ...
-
-    def getSensors(self) -> list[Sensor[Any, Any, Any]]:
-        """
-        Get all sensors this plugin has registered in this session.
-
-        Returns:
-            Sensor instances owned by this plugin
-        """
-        ...
-
-    async def getRegisteredSensors(self) -> list[RegisteredSensorInfo]:
-        """
-        Get the sensors of this plugin the host has persisted, including ones
-        from earlier runs that are not registered in this session. Lets a
-        provider reconcile an external inventory against what already exists.
-
-        Returns:
-            Persisted sensor records owned by this plugin
-        """
-        ...
 
     async def getSensorHistory(self, sensorIds: list[str], start: int, end: int) -> list[SensorHistoryEntry]:
         """
@@ -306,7 +252,15 @@ class DiscoveredSensor(TypedDict):
     """A sensor a plugin can offer for adoption (see ``SensorDiscoveryProvider``)."""
 
     id: str
-    """Stable identifier within the plugin (e.g. the source system's entity id). Used for deduplication and adoption."""
+    """The source's stable identity for this sensor, never its address: a Home
+    Assistant entity-registry id, an MQTT ``unique_id``, a vendor device id.
+    It becomes the sensor's ``nativeId``, and a sensor keeps its record,
+    assignments and history for as long as this id stays the same. Using a
+    mutable address (a Home Assistant ``entity_id``) here turns every rename at
+    the source into an orphan plus a new sensor."""
+
+    address: NotRequired[str]
+    """Current address at the source (e.g. a Home Assistant entity id), shown next to the name."""
 
     name: str
     """Display name shown in the UI adoption list."""
@@ -324,23 +278,23 @@ class DiscoveredSensor(TypedDict):
     """Model label (optional)."""
 
 
-class RegisteredSensorInfo(TypedDict):
-    """Persisted registry record of a sensor this plugin registered, see ``SensorManager.getRegisteredSensors``."""
+class AdoptedSensor(TypedDict):
+    """A sensor the user adopted; what the host hands a ``SensorDiscoveryProvider`` to build its runtime sensor from."""
 
     id: str
-    """Persistent registry id."""
+    """Persistent registry id, the sensor's ``id`` once bound."""
 
-    nativeId: NotRequired[str]
-    """The nativeId the sensor was registered with, when it had one."""
+    nativeId: str
+    """The ``DiscoveredSensor.id`` the adoption used."""
 
-    type: SensorType
-    """Sensor type."""
+    address: NotRequired[str]
+    """Last known address at the source, if any."""
 
     name: str
-    """Sensor name at registration."""
+    """Name at adoption time; the user may have renamed the sensor since."""
 
-    connected: bool
-    """True while a live sensor instance backs the record."""
+    type: SensorType
+    """Sensor type the plugin offered it as."""
 
 
 class CreateDownloadOptions(TypedDict):

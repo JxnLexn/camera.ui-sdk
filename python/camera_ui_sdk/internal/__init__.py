@@ -13,6 +13,8 @@ if TYPE_CHECKING:
         PropertyChangedEvent,
         PropertyUpdateFn,
         SensorJSON,
+        SensorSourcePatch,
+        SourceUpdateFn,
     )
     from .shared_utils import is_equal
     from .streaming_internal import IceServer
@@ -28,6 +30,8 @@ __all__ = [
     "PropertyChangedEvent",
     "PropertyUpdateFn",
     "CapabilityUpdateFn",
+    "SensorSourcePatch",
+    "SourceUpdateFn",
     # Camera wire-format
     "DetectionEventMessage",
     # Streaming
@@ -51,6 +55,8 @@ _LAZY: dict[str, tuple[str, str]] = {
     "PropertyChangedEvent": (".sensor_rpc", "PropertyChangedEvent"),
     "PropertyUpdateFn": (".sensor_rpc", "PropertyUpdateFn"),
     "CapabilityUpdateFn": (".sensor_rpc", "CapabilityUpdateFn"),
+    "SensorSourcePatch": (".sensor_rpc", "SensorSourcePatch"),
+    "SourceUpdateFn": (".sensor_rpc", "SourceUpdateFn"),
     "DetectionEventMessage": (".camera_wire", "DetectionEventMessage"),
     "IceServer": (".streaming_internal", "IceServer"),
     "FrameType": (".camera_enums", "FrameType"),

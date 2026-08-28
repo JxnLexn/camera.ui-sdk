@@ -23,8 +23,8 @@ from .api import PluginAPI
 
 if TYPE_CHECKING:
     from ..camera import CameraConfig, CameraDevice
-    from ..manager import DiscoveredCamera, DiscoveredSensor
-    from ..sensor.base import SensorLike
+    from ..manager import AdoptedSensor, DiscoveredCamera, DiscoveredSensor
+    from ..sensor.base import Sensor, SensorLike
     from ..storage import DeviceStorage, JsonSchemaWithoutCallbacks
     from ..types import LoggerService
 
@@ -302,38 +302,65 @@ class DiscoveryProvider(Protocol):
 @runtime_checkable
 class SensorDiscoveryProvider(Protocol):
     """Implemented by sensor-providing plugins that face an external inventory
-    (Home Assistant entities, vendor accessories) the user should pick from
-    instead of the plugin importing everything. Discovered sensors are listed
-    on the Sensors page; adoption and release are the plugin's to persist, so
-    an adopted sensor re-registers on every start through the normal
-    ``sensorManager.addSensor()`` path."""
+    (Home Assistant entities, vendor accessories) the user picks from instead
+    of the plugin importing everything. Declare ``PluginInterface.SensorDiscovery``
+    in the contract.
+
+    The host owns the adoption: it lists what the plugin discovers, creates the
+    sensor record when the user adopts, hands the plugin its adopted sensors on
+    every start and tells it when the user deletes one. The plugin keeps no
+    list of its own.
+
+    Identity is the source's stable id (``DiscoveredSensor.id``), never an
+    address; the same id means the same sensor across restarts and renames."""
 
     async def onDiscoverSensors(self) -> list[DiscoveredSensor]:
-        """Return the sensors the plugin can currently offer for adoption.
-        Called by the host on demand (Sensors page load / refresh);
-        already-registered sensors must not be included.
+        """Return every sensor the source currently offers. The host drops the
+        ones already adopted, the plugin does not filter. Called on demand
+        (Sensors page, rescan) and on a polling schedule while the page is open.
 
         Returns:
             Sensors currently discoverable by this plugin.
         """
         ...
 
-    async def onAdoptSensor(self, sensor: DiscoveredSensor) -> None:
-        """Adopt a discovered sensor: persist the choice and register the
-        sensor. From then on the plugin registers it on every start until it
-        is released.
+    async def configureAdoptedSensors(self, sensors: list[AdoptedSensor]) -> list[Sensor[Any, Any, Any]]:
+        """Called once at startup, right after ``configureCameras()``, with every
+        sensor the user adopted from this plugin. Build and return one runtime
+        sensor per record, always, from the record's type and name alone; the
+        host binds each returned sensor to its record by ``nativeId``. Report
+        what the source looks like on the sensor itself (``setSourceState``,
+        ``setAddress``) as soon as you know: a record the source no longer has
+        gets ``setSourceState("removed")``, it is never dropped here.
 
         Args:
-            sensor: The discovered sensor the user confirmed in the UI.
+            sensors: The adopted sensors of this plugin.
+
+        Returns:
+            One runtime sensor per adopted record.
         """
         ...
 
-    async def onReleaseSensor(self, discoveredId: str) -> None:
-        """Release a previously adopted sensor: forget the choice and
-        unregister it. Called when the user removes the sensor in the UI.
+    async def onSensorAdopted(self, sensor: AdoptedSensor) -> Sensor[Any, Any, Any]:
+        """The user adopted a discovered sensor and the host created its record.
+        Build and return the runtime sensor for it, same as one entry of
+        ``configureAdoptedSensors()``.
 
         Args:
-            discoveredId: The ``DiscoveredSensor.id`` the adoption used.
+            sensor: The adopted sensor.
+
+        Returns:
+            The runtime sensor to bind to the record.
+        """
+        ...
+
+    async def onSensorUnadopted(self, nativeId: str) -> None:
+        """The user deleted an adopted sensor. The host has already unbound the
+        runtime sensor; drop whatever the plugin still holds for it. The entity
+        shows up as discovered again on the next scan.
+
+        Args:
+            nativeId: The ``DiscoveredSensor.id`` the adoption used.
         """
         ...
 
