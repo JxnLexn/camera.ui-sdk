@@ -29,10 +29,10 @@ test = [
     "pytest-asyncio>=1.4.0",
 ]
 dev = [
-    "build>=1.5.0",
+    "build>=1.6.0",
     "twine>=7.0.0",
     "mypy>=2.3.1",
-    "ruff>=0.16.4",
+    "ruff>=0.16.5",
 ]
 docs = [
     "mkdocs-material>=9.7.7",
