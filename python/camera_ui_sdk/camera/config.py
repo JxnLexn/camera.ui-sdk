@@ -60,6 +60,10 @@ class CameraInput(TypedDict):
     """Strip the audio track from this source (defaults to False)."""
     backchannelDisabled: NotRequired[bool]
     """Drop the talk channel of this source, so clients get no microphone (defaults to False)."""
+    timeout: NotRequired[int]
+    """Seconds without media before the stream reconnects. Unset means the host default: 5 for cameras, 60 for plugin-served sources."""
+    handshakeTimeout: NotRequired[int]
+    """Seconds allowed per RTSP request while connecting. Raise it for cameras that wake slowly. Unset means 5."""
     urls: StreamUrls
     """Generated streaming URLs."""
     videoCodec: NotRequired[VideoCodec]
@@ -89,6 +93,10 @@ class CameraConfigInputSettings(TypedDict):
     """Strip the audio track from this source (defaults to False)."""
     backchannelDisabled: NotRequired[bool]
     """Drop the talk channel of this source, so clients get no microphone (defaults to False)."""
+    timeout: NotRequired[int]
+    """Seconds without media before the stream reconnects. Unset means the host default: 5 for cameras, 60 for plugin-served sources."""
+    handshakeTimeout: NotRequired[int]
+    """Seconds allowed per RTSP request while connecting. Raise it for cameras that wake slowly. Unset means 5."""
     childSourceId: NotRequired[str]
     """Child source ID (for snapshot fallback)."""
     urls: NotRequired[list[str]]

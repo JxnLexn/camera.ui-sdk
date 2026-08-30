@@ -19,6 +19,10 @@ export interface CameraInputSettings {
   muted?: boolean;
   /** Drop the talk channel of this source, so clients get no microphone (defaults to false). */
   backchannelDisabled?: boolean;
+  /** Seconds without media before the stream reconnects. Unset means the host default: 5 for cameras, 60 for plugin-served sources. */
+  timeout?: number;
+  /** Seconds allowed per RTSP request while connecting. Raise it for cameras that wake slowly. Unset means 5. */
+  handshakeTimeout?: number;
   /** User-provided stream URLs. */
   urls: string[];
   /** Child source ID (for snapshot fallback). */
