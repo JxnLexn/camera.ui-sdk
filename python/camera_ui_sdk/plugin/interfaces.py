@@ -20,6 +20,7 @@ from ..sensor.audio import AudioFrameData
 from ..sensor.clip import ClipEmbedding
 from ..sensor.motion import VideoFrameData
 from .api import PluginAPI
+from .assistant import AssistantToolProvider
 
 if TYPE_CHECKING:
     from ..camera import CameraConfig, CameraDevice
@@ -551,5 +552,6 @@ PluginInterfaces = (
     | ClassifierDetectionInterface
     | ClipDetectionInterface
     | DiscoveryProvider
+    | AssistantToolProvider
 )
 """Union of all optional plugin interfaces."""

@@ -10,6 +10,7 @@ import type { LicensePlateDetection } from '../sensor/licensePlate.js';
 import type { DeviceStorage, JsonSchema, JsonSchemaWithoutCallbacks } from '../storage/index.js';
 import type { LoggerService } from '../types.js';
 import type { PluginAPI } from './api.js';
+import type { AssistantToolProvider } from './assistant.js';
 import type { NotifierInterface } from './notifier.js';
 
 /** Image metadata passed to detector test methods. */
@@ -415,5 +416,6 @@ export type PluginInterfaces = Partial<
   ClipDetectionInterface &
   DiscoveryProvider &
   SensorDiscoveryProvider &
-  NotifierInterface
+  NotifierInterface &
+  AssistantToolProvider
 >;

@@ -67,6 +67,8 @@ export enum PluginInterface {
   OAuthAuthCodeFlow = 'OAuthAuthCodeFlow',
   /** Implements OAuthClientCredentialsCapable (user-supplied client_id + client_secret). */
   OAuthClientCredentials = 'OAuthClientCredentials',
+  /** Implements AssistantToolProvider, so the assistant can offer the plugin's tools to the model. */
+  AssistantTools = 'AssistantTools',
 }
 
 /**

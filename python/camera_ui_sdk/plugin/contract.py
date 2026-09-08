@@ -88,6 +88,9 @@ class PluginInterface(StrEnum):
     OAuthClientCredentials = "OAuthClientCredentials"
     """Implements OAuthClientCredentialsCapable (user-supplied client_id + client_secret)."""
 
+    AssistantTools = "AssistantTools"
+    """Implements AssistantToolProvider, so the assistant can offer the plugin's tools to the model."""
+
 
 class PluginCapability(StrEnum):
     """Permission a plugin requests so it can call a host-provided system

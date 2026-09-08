@@ -1,6 +1,22 @@
 from __future__ import annotations
 
 from .api import API_EVENT, APIListener, PluginAPI
+from .assistant import (
+    AssistantToolArrayProperty,
+    AssistantToolBooleanProperty,
+    AssistantToolContext,
+    AssistantToolImage,
+    AssistantToolNumberProperty,
+    AssistantToolObjectProperty,
+    AssistantToolProperty,
+    AssistantToolProvider,
+    AssistantToolReference,
+    AssistantToolResult,
+    AssistantToolSchema,
+    AssistantToolSpec,
+    AssistantToolStringProperty,
+    define_assistant_tool,
+)
 from .contract import (
     PROTOCOL_LEVEL,
     PluginCapability,
@@ -112,4 +128,18 @@ __all__ = [
     "OAuthDeviceFlowCapable",
     "OAuthAuthCodeFlowCapable",
     "OAuthClientCredentialsCapable",
+    "AssistantToolArrayProperty",
+    "AssistantToolBooleanProperty",
+    "AssistantToolContext",
+    "AssistantToolImage",
+    "AssistantToolNumberProperty",
+    "AssistantToolObjectProperty",
+    "AssistantToolProperty",
+    "AssistantToolProvider",
+    "AssistantToolReference",
+    "AssistantToolResult",
+    "AssistantToolSchema",
+    "AssistantToolSpec",
+    "AssistantToolStringProperty",
+    "define_assistant_tool",
 ]
