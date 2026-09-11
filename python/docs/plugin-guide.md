@@ -658,6 +658,19 @@ if face is not None:
 
 Use `await self.api.coreManager.getPluginsByInterface(PluginInterface.FaceDetection)` to discover candidate plugins by capability rather than by name.
 
+To use one of the language models configured in camera.ui, call `self.api.coreManager.assistantAsk()`. The admin allows the plugin under Settings, Assistant, Plugin access and picks the model; camera.ui runs the request, so the plugin never holds a key. `assistantAccess()` tells you whether the plugin is allowed, and the `assistantModelChanged` core event fires when that changes:
+
+```python
+access = await self.api.coreManager.assistantAccess()
+if access["allowed"]:
+    answer = await self.api.coreManager.assistantAsk({
+        "system": "Answer with one word.",
+        "prompt": "Is there a person in this picture?",
+        "images": [{"data": jpeg_bytes, "mimeType": "image/jpeg"}],
+    })
+    text = answer["text"] if answer["ok"] else None
+```
+
 ## 9. Common pitfalls
 
 - **Always release per-camera state in `onCameraReleased`.** Timers, vendor sessions, RTP sockets, `Disposable`s from `subscribe()` — drop them all. Leaking them keeps the camera object alive forever and prevents reassignment from working.

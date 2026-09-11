@@ -30,6 +30,43 @@ export interface CoreManagerEvent {
 }
 
 /**
+ * One completion request to the assistant model the admin assigned to this plugin.
+ */
+export interface AssistantAskRequest {
+  /** The user message. */
+  prompt: string;
+  /** Optional system instruction. */
+  system?: string;
+  /** Pictures for the request, sent only when the assigned model sees pictures. */
+  images?: { data: Uint8Array; mimeType: string }[];
+  /** JSON schema of the expected answer; the result then carries `json`. */
+  outputSchema?: Record<string, unknown>;
+  /** Timeout in milliseconds, default 45 s, at most 300 s. */
+  timeoutMs?: number;
+}
+
+/**
+ * Answer of {@link CoreManager.assistantAsk}: the text (and parsed JSON when a schema was given) or the reason it did not run.
+ */
+export type AssistantAskResult =
+  | { ok: true; text: string; json?: unknown; usage: { promptTokens: number; completionTokens: number } }
+  | { ok: false; reason: 'not_allowed' | 'unconfigured' | 'timeout' | 'error'; message: string };
+
+/**
+ * Whether this plugin may use the assistant model, and what the assigned model can do.
+ */
+export interface AssistantAccess {
+  /** True when the admin allowed this plugin under Settings, Assistant. */
+  allowed: boolean;
+  /** Model id of the assigned entry, null when not allowed. */
+  model: string | null;
+  /** Result of the picture probe for the assigned entry, null when unknown. */
+  vision: boolean | null;
+  /** Answer language of the assistant settings (for example `de`), null when it follows the user interface. */
+  language: string | null;
+}
+
+/**
  * Core manager interface for system-level operations.
  *
  * Provides access to cross-cutting services like the FFmpeg binary path,
@@ -96,7 +133,36 @@ export interface CoreManager {
   getPluginsByInterface(interfaceName: PluginInterface): Promise<PluginInfo[]>;
 
   /**
-   * Observable for core manager events (e.g. cloud account changes).
+   * Ask the assistant model for one completion.
+   * The admin decides under Settings, Assistant which plugins may use the model and which entry they get;
+   * the key never reaches the plugin.
+   *
+   * @param request - Prompt, optional system text, pictures and output schema
+   *
+   * @returns The answer, or `ok: false` with the reason when the plugin is not allowed or the call failed
+   *
+   * @example
+   * ```typescript
+   * const answer = await api.coreManager.assistantAsk({
+   *   system: 'Answer with one word.',
+   *   prompt: 'Is there a person in this picture?',
+   *   images: [{ data: jpeg, mimeType: 'image/jpeg' }],
+   * });
+   * if (answer.ok) console.log(answer.text);
+   * ```
+   */
+  assistantAsk(request: AssistantAskRequest): Promise<AssistantAskResult>;
+
+  /**
+   * Check whether this plugin may use the assistant model and what the assigned entry can do.
+   * Subscribe to the `assistantModelChanged` event to learn about changes while running.
+   *
+   * @returns Access flag, model id and picture support
+   */
+  assistantAccess(): Promise<AssistantAccess>;
+
+  /**
+   * Observable for core manager events (e.g. cloud account changes, `assistantModelChanged` with `{ pluginId, configured }`).
    *
    * @example
    * ```typescript

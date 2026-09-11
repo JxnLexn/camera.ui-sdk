@@ -33,6 +33,43 @@ class CoreManagerEvent(TypedDict):
     """Event-specific data payload. Shape depends on the event type."""
 
 
+class AssistantAskImage(TypedDict):
+    """One picture of an assistant request."""
+
+    data: bytes
+    mimeType: str
+
+
+class AssistantAskRequest(TypedDict, total=False):
+    """One completion request to the assistant model the admin assigned to this plugin."""
+
+    prompt: str
+    system: str
+    images: list[AssistantAskImage]
+    outputSchema: dict[str, Any]
+    timeoutMs: int
+
+
+class AssistantAskResult(TypedDict, total=False):
+    """Answer of ``CoreManager.assistantAsk``: text (and ``json`` when a schema was given) or the reason it did not run."""
+
+    ok: bool
+    text: str
+    json: Any
+    usage: dict[str, int]
+    reason: str
+    message: str
+
+
+class AssistantAccess(TypedDict):
+    """Whether this plugin may use the assistant model, and what the assigned model can do."""
+
+    allowed: bool
+    model: str | None
+    vision: bool | None
+    language: str | None
+
+
 class SensorHistoryEntry(TypedDict):
     """One recorded change of one sensor property."""
 
@@ -89,6 +126,42 @@ class CoreManager(Protocol):
 
         Returns:
             Plugin instance or None if not found. Cast to specific interface as needed.
+        """
+        ...
+
+    async def assistantAsk(self, request: AssistantAskRequest) -> AssistantAskResult:
+        """
+        Ask the assistant model for one completion.
+
+        The admin decides under Settings, Assistant which plugins may use the model and
+        which entry they get; the key never reaches the plugin.
+
+        Args:
+            request: Prompt, optional system text, pictures and output schema. ``timeoutMs``
+                defaults to 45 s and is capped at 300 s.
+
+        Returns:
+            The answer, or ``ok: False`` with the reason when the plugin is not allowed or the call failed.
+
+        Example:
+            answer = await api.coreManager.assistantAsk({
+                "system": "Answer with one word.",
+                "prompt": "Is there a person in this picture?",
+                "images": [{"data": jpeg, "mimeType": "image/jpeg"}],
+            })
+            if answer["ok"]:
+                print(answer["text"])
+        """
+        ...
+
+    async def assistantAccess(self) -> AssistantAccess:
+        """
+        Check whether this plugin may use the assistant model and what the assigned entry can do.
+
+        Subscribe to the ``assistantModelChanged`` event to learn about changes while running.
+
+        Returns:
+            Access flag, model id and picture support.
         """
         ...
 
@@ -456,6 +529,10 @@ class NotificationManager(Protocol):
 
 __all__ = [
     # Manager interfaces
+    "AssistantAccess",
+    "AssistantAskImage",
+    "AssistantAskRequest",
+    "AssistantAskResult",
     "CoreManager",
     "CoreManagerEvent",
     "DeviceManager",

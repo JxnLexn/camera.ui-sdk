@@ -627,3 +627,17 @@ const result = await face?.testFaceDetection(jpegBytes, { width: 640, height: 48
 ```
 
 Use `api.coreManager.getPluginsByInterface(PluginInterface.FaceDetection)` to discover candidate plugins by capability rather than by name.
+
+To use one of the language models configured in camera.ui, call `api.coreManager.assistantAsk()`. The admin allows the plugin under Settings, Assistant, Plugin access and picks the model; camera.ui runs the request, so the plugin never holds a key. `assistantAccess()` tells you whether the plugin is allowed, and the `assistantModelChanged` core event fires when that changes:
+
+```ts
+const access = await this.api.coreManager.assistantAccess();
+if (access.allowed) {
+  const answer = await this.api.coreManager.assistantAsk({
+    system: 'Answer with one word.',
+    prompt: 'Is there a person in this picture?',
+    images: [{ data: jpegBytes, mimeType: 'image/jpeg' }],
+  });
+  const text = answer.ok ? answer.text : undefined;
+}
+```
