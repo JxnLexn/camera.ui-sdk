@@ -78,6 +78,10 @@ from .camera import (
 )
 from .manager import (
     AdoptedSensor,
+    AssistantAccess,
+    AssistantAskImage,
+    AssistantAskRequest,
+    AssistantAskResult,
     CoreManager,
     CoreManagerEvent,
     CreateDownloadOptions,
@@ -531,6 +535,10 @@ __all__ = [
     "SensorManager",
     "CoreManager",
     "CoreManagerEvent",
+    "AssistantAskImage",
+    "AssistantAskRequest",
+    "AssistantAskResult",
+    "AssistantAccess",
     "SensorHistoryEntry",
     "DownloadManager",
     "CreateDownloadOptions",
