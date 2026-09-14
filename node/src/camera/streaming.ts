@@ -354,6 +354,20 @@ export interface Fmp4SessionOptions {
 }
 
 /**
+ * Video description of the muxed fMP4 output, available after the stream has started.
+ */
+export interface Fmp4VideoInfo {
+  /** Output codec family. */
+  codec: 'h264' | 'hevc' | 'av1' | 'unknown';
+  /** RFC 6381 codec string of the output, e.g. `hvc1.1.6.L120.B0`. */
+  codecString: string;
+  width: number;
+  height: number;
+  /** Frames per second, 0 when unknown. */
+  fps: number;
+}
+
+/**
  * Fragmented MP4 streaming session for MSE-based playback.
  * Produces FMP4 segments suitable for Media Source Extensions.
  */
@@ -366,6 +380,8 @@ export interface Fmp4Session extends Subscribed {
   readonly onEnded: ReplaySubject<void>;
   /** FMP4 initialization segment (moov box). */
   readonly initSegment: Promise<Buffer>;
+  /** Video description of the muxed output, filled after {@link startStream}; undefined with no video track or before start. */
+  readonly videoInfo: Fmp4VideoInfo | undefined;
 
   /**
    * Start the FMP4 stream.
