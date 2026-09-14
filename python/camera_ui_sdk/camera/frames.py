@@ -40,12 +40,16 @@ class CameraFrameWorkerSettings(TypedDict):
     """Decoder hardware selection used instead of `decoder` while this camera decodes on its assigned worker. Falls back to `decoder` when omitted."""
 
 
+SnapshotRefreshMode = Literal["interval", "onView", "onDemand"]
+"""When a camera takes a new snapshot. `interval` runs a timer, `onView` fetches for a viewer once the stored picture is older than `maxAge`, `onDemand` only on an explicit request (automations, the refresh button, the API)."""
+
+
 class SnapshotSettings(TypedDict):
     """Snapshot settings for a camera."""
 
-    autoRefresh: bool
-    """Enable automatic snapshot refresh."""
-    ttl: int
-    """Cache TTL in seconds (how long a snapshot is valid)."""
+    mode: SnapshotRefreshMode
+    """When a new picture is taken."""
     interval: int
-    """Auto-refresh interval in seconds (min: 10, max: 60)."""
+    """Timer interval in seconds for `interval` mode (10 to 3600)."""
+    maxAge: int
+    """Age in seconds after which a viewer gets a new picture in `onView` mode (10 to 3600)."""

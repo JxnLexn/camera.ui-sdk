@@ -78,6 +78,7 @@ from .frames import (
     CameraFrameWorkerSettings,
     FrameWorkerDecoderHardware,
     FrameWorkerDecoderSettings,
+    SnapshotRefreshMode,
     SnapshotSettings,
 )
 from .notification import (
@@ -176,6 +177,7 @@ __all__ = [
     "NotificationSpeed",
     "RecordingMode",
     "RecordingSource",
+    "SnapshotRefreshMode",
     "SnapshotSettings",
     # Config
     "CameraInformation",

@@ -23,12 +23,19 @@ export interface CameraFrameWorkerSettings {
   workerDecoder?: FrameWorkerDecoderSettings;
 }
 
+/**
+ * When a camera takes a new snapshot.
+ * `interval` runs a timer, `onView` fetches for a viewer once the stored picture is older than `maxAge`,
+ * `onDemand` only on an explicit request (automations, the refresh button, the API).
+ */
+export type SnapshotRefreshMode = 'interval' | 'onView' | 'onDemand';
+
 /** Snapshot settings for a camera. */
 export interface SnapshotSettings {
-  /** Enable automatic snapshot refresh. */
-  autoRefresh: boolean;
-  /** Cache TTL in seconds (how long a snapshot is valid). */
-  ttl: number;
-  /** Auto-refresh interval in seconds (min: 10, max: 60). */
+  /** When a new picture is taken. */
+  mode: SnapshotRefreshMode;
+  /** Timer interval in seconds for `interval` mode (10 to 3600). */
   interval: number;
+  /** Age in seconds after which a viewer gets a new picture in `onView` mode (10 to 3600). */
+  maxAge: number;
 }
