@@ -109,6 +109,10 @@ class VideoCodecProperties(TypedDict):
     """RTP payload type."""
     fmtpInfo: NotRequired[FMTPInfo]
     """Optional format parameters."""
+    profile: NotRequired[str]
+    """H.264 or H.265 profile, for example ``High`` or ``Main 10``."""
+    level: NotRequired[int]
+    """H.264 or H.265 level times ten, for example ``51`` for level 5.1."""
 
 
 class AudioStreamInfo(TypedDict):

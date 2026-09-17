@@ -107,6 +107,10 @@ export interface VideoCodecProperties {
   payloadType: number;
   /** Optional format parameters. */
   fmtpInfo?: FMTPInfo;
+  /** H.264 or H.265 profile, for example `High` or `Main 10`. */
+  profile?: string;
+  /** H.264 or H.265 level times ten, for example `51` for level 5.1. */
+  level?: number;
 }
 
 /** Audio stream information from probe. */
