@@ -134,6 +134,8 @@ def validate_contract_consistency(contract: PluginContract, plugin_name: str | N
         raise ValueError(f"{prefix}SensorProvider plugins must provide at least one sensor type.")
     if role == PluginRole.CameraAndSensorProvider and len(provides) == 0:
         raise ValueError(f"{prefix}CameraAndSensorProvider plugins must provide at least one sensor type.")
+    if role == PluginRole.Service and (len(provides) > 0 or len(contract["consumes"]) > 0):
+        raise ValueError(f"{prefix}Service plugins cannot provide or consume sensors.")
 
 
 def is_hub(contract: PluginContract) -> bool:
@@ -153,6 +155,25 @@ def is_hub(contract: PluginContract) -> bool:
         ```
     """
     return contract["role"] == PluginRole.Hub
+
+
+def is_service(contract: PluginContract) -> bool:
+    """Report whether the plugin only serves camera.ui itself (role Service),
+    which means it never appears in a camera's plugin list.
+
+    Args:
+        contract: Plugin contract to inspect.
+
+    Returns:
+        True if the role is :attr:`PluginRole.Service`.
+
+    Example:
+        ```python
+        if is_service(contract):
+            skip_camera_assignment()
+        ```
+    """
+    return contract["role"] == PluginRole.Service
 
 
 def can_create_cameras(contract: PluginContract) -> bool:

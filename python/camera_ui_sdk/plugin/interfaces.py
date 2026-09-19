@@ -254,6 +254,38 @@ class BasePlugin(ABC, Generic[StorageT]):
         return None
 
 
+class ServicePlugin(BasePlugin[StorageT]):
+    """Base class for a plugin with the role :attr:`PluginRole.Service`: it
+    serves camera.ui itself and never touches cameras, so the camera lifecycle
+    hooks are already implemented as no-ops.
+
+    Example:
+        ```python
+        class MyModels(ServicePlugin):
+            async def assistantModels(self) -> list[AssistantModelSpec]:
+                return [
+                    {
+                        "id": "local",
+                        "name": "Local model",
+                        "contextTokens": 8192,
+                        "vision": False,
+                        "toolCalling": False,
+                        "structuredOutput": True,
+                    }
+                ]
+        ```
+    """
+
+    async def configureCameras(self, cameras: list[CameraDevice]) -> None:
+        """Does nothing, a service plugin owns no cameras."""
+
+    async def onCameraAdded(self, camera: CameraDevice) -> None:
+        """Does nothing, a service plugin owns no cameras."""
+
+    async def onCameraReleased(self, cameraId: str) -> None:
+        """Does nothing, a service plugin owns no cameras."""
+
+
 @runtime_checkable
 class DiscoveryProvider(Protocol):
     """Implemented by plugins that can scan the network for new cameras and

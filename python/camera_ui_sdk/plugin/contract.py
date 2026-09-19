@@ -35,6 +35,9 @@ class PluginRole(StrEnum):
     CameraAndSensorProvider = "cameraAndSensorProvider"
     """Manages cameras and exposes sensors, on its own cameras and, with ``consumes`` set, on foreign ones."""
 
+    Service = "service"
+    """Serves camera.ui itself, for example with a language model. Touches no cameras and no sensors, and is never assigned to one."""
+
 
 class PluginInterface(StrEnum):
     """Capability flags a plugin advertises in its contract.
@@ -90,6 +93,9 @@ class PluginInterface(StrEnum):
 
     AssistantTools = "AssistantTools"
     """Implements AssistantToolProvider, so the assistant can offer the plugin's tools to the model."""
+
+    AssistantModels = "AssistantModels"
+    """Implements AssistantModelProvider, so its models appear in the assistant settings."""
 
 
 class PluginCapability(StrEnum):

@@ -30,6 +30,8 @@ export enum PluginRole {
   CameraController = 'cameraController',
   /** Manages cameras and exposes sensors, on its own cameras and, with `consumes` set, on foreign ones. */
   CameraAndSensorProvider = 'cameraAndSensorProvider',
+  /** Serves camera.ui itself, for example with a language model. Touches no cameras and no sensors, and is never assigned to one. */
+  Service = 'service',
 }
 
 /**
@@ -69,6 +71,8 @@ export enum PluginInterface {
   OAuthClientCredentials = 'OAuthClientCredentials',
   /** Implements AssistantToolProvider, so the assistant can offer the plugin's tools to the model. */
   AssistantTools = 'AssistantTools',
+  /** Implements AssistantModelProvider, so its models appear in the assistant settings. */
+  AssistantModels = 'AssistantModels',
 }
 
 /**

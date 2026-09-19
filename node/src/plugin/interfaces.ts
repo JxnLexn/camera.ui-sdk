@@ -200,6 +200,28 @@ export abstract class BasePlugin<T extends Record<string, any> = Record<string, 
 }
 
 /**
+ * Base class for a plugin with the role {@link PluginRole.Service}: it serves
+ * camera.ui itself and never touches cameras, so the camera lifecycle hooks are
+ * already implemented as no-ops.
+ *
+ * @example
+ * ```ts
+ * export default class MyModels extends ServicePlugin implements AssistantModelProvider {
+ *   assistantModels(): AssistantModelSpec[] {
+ *     return [{ id: 'local', name: 'Local model', contextTokens: 8192, vision: false, toolCalling: false, structuredOutput: true }];
+ *   }
+ * }
+ * ```
+ */
+export abstract class ServicePlugin<T extends Record<string, any> = Record<string, any>> extends BasePlugin<T> {
+  public async configureCameras(): Promise<void> {}
+
+  public async onCameraAdded(): Promise<void> {}
+
+  public async onCameraReleased(): Promise<void> {}
+}
+
+/**
  * Implemented by plugins that can scan the network for new cameras and adopt
  * them. Only plugins with a camera-controlling role (CameraController or
  * CameraAndSensorProvider) are queried for discovery.

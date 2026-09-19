@@ -154,6 +154,12 @@ export function validateContractConsistency(contract: PluginContract, pluginName
     case PluginRole.CameraController:
       // provides may be empty or filled, its sensors only ever attach to its own cameras
       break;
+
+    case PluginRole.Service:
+      if (contract.provides.length > 0 || contract.consumes.length > 0) {
+        throw new Error(`${prefix}Service plugins cannot provide or consume sensors.`);
+      }
+      break;
   }
 }
 
@@ -174,6 +180,25 @@ export function validateContractConsistency(contract: PluginContract, pluginName
  */
 export function isHub(contract: PluginContract): boolean {
   return contract.role === PluginRole.Hub;
+}
+
+/**
+ * Reports whether the plugin only serves camera.ui itself (role Service), which
+ * means it never appears in a camera's plugin list.
+ *
+ * @param contract - Plugin contract to inspect.
+ *
+ * @returns `true` if the role is {@link PluginRole.Service}.
+ *
+ * @example
+ * ```ts
+ * import { isService, PluginInterface } from '@camera.ui/sdk';
+ *
+ * if (isService(contract)) skipCameraAssignment();
+ * ```
+ */
+export function isService(contract: PluginContract): boolean {
+  return contract.role === PluginRole.Service;
 }
 
 /**

@@ -91,7 +91,18 @@ from camera_ui_sdk import PluginInterface, PluginRole, SensorType
     "consumes": [SensorType.Motion, SensorType.Doorbell],
     "interfaces": [],
 }
+
+# A language model for the assistant, nothing camera-shaped
+{
+    "name": "Apple LLM",
+    "role": PluginRole.Service,
+    "provides": [],
+    "consumes": [],
+    "interfaces": [PluginInterface.AssistantModels],
+}
 ```
+
+``PluginRole.Service`` is the role for a plugin that serves camera.ui itself instead of cameras: it provides and consumes no sensors and never shows up in a camera's plugin list. Subclass ``ServicePlugin`` instead of ``BasePlugin`` and the camera lifecycle hooks are already there as no-ops.
 
 The SDK also carries a plugin protocol level (`PROTOCOL_LEVEL`). The CLI stamps the level your plugin was built against into the bundle, and the server refuses to start a plugin whose level it does not support, telling the user whether the plugin or the server needs an update. You never set it yourself: rebuilding against the current SDK is all it takes.
 
@@ -670,6 +681,21 @@ if access["allowed"]:
     })
     text = answer["text"] if answer["ok"] else None
 ```
+
+A plugin can also go the other way and **bring a model**: list ``PluginInterface.AssistantModels`` in the contract and implement ``AssistantModelProvider``. Its models then appear in the provider list of the assistant settings, with no key and no address to fill in. Worth it for a model camera.ui cannot reach itself: one without an HTTP API, one behind an unusual authentication, or one that only runs on the machine the plugin runs on.
+
+```python
+async def assistantModels(self) -> list[AssistantModelSpec]:
+    return [{"id": "local", "name": "Local model", "contextTokens": 8192,
+             "vision": True, "toolCalling": True, "structuredOutput": True}]
+
+async def assistantGenerate(self, request: AssistantModelRequest, ctx: AssistantModelContext):
+    async for delta in self.session.stream(request, ctx["timeoutMs"]):
+        yield {"type": "text", "delta": delta}
+    yield {"type": "done", "finish": "stop"}
+```
+
+Every request carries the whole conversation, the plugin keeps no state. ``contextTokens`` is not decoration: camera.ui plans prompt, tools and history with it. A tool call is yielded once its arguments are complete, the host runs the tool and asks again with the result in ``messages``.
 
 ## 9. Common pitfalls
 

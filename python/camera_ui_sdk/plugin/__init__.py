@@ -17,6 +17,23 @@ from .assistant import (
     AssistantToolStringProperty,
     define_assistant_tool,
 )
+from .assistant_models import (
+    AssistantModelChunk,
+    AssistantModelContent,
+    AssistantModelContext,
+    AssistantModelDoneChunk,
+    AssistantModelImage,
+    AssistantModelMessage,
+    AssistantModelProvider,
+    AssistantModelRequest,
+    AssistantModelSpec,
+    AssistantModelText,
+    AssistantModelTextChunk,
+    AssistantModelTool,
+    AssistantModelToolCall,
+    AssistantModelToolCallChunk,
+    AssistantModelUsageChunk,
+)
 from .contract import (
     PROTOCOL_LEVEL,
     PluginCapability,
@@ -33,6 +50,7 @@ from .helper import (
     has_capability,
     has_interface,
     is_hub,
+    is_service,
     validate_contract_consistency,
 )
 from .interfaces import (
@@ -57,6 +75,7 @@ from .interfaces import (
     ObjectDetectionPluginResponse,
     PluginInterfaces,
     SensorDiscoveryProvider,
+    ServicePlugin,
 )
 from .notifier import (
     Notification,
@@ -77,6 +96,21 @@ from .oauth import (
 )
 
 __all__ = [
+    "AssistantModelChunk",
+    "AssistantModelContent",
+    "AssistantModelContext",
+    "AssistantModelDoneChunk",
+    "AssistantModelImage",
+    "AssistantModelMessage",
+    "AssistantModelProvider",
+    "AssistantModelRequest",
+    "AssistantModelSpec",
+    "AssistantModelText",
+    "AssistantModelTextChunk",
+    "AssistantModelTool",
+    "AssistantModelToolCall",
+    "AssistantModelToolCallChunk",
+    "AssistantModelUsageChunk",
     "PROTOCOL_LEVEL",
     "PythonVersion",
     "PluginInfo",
@@ -100,6 +134,7 @@ __all__ = [
     "ClipTextEmbeddingResult",
     "PluginAPI",
     "BasePlugin",
+    "ServicePlugin",
     "DiscoveryProvider",
     "SensorDiscoveryProvider",
     "MotionDetectionInterface",
@@ -111,6 +146,7 @@ __all__ = [
     "get_contract_validation_errors",
     "validate_contract_consistency",
     "is_hub",
+    "is_service",
     "can_create_cameras",
     "can_provide_sensors_to_any_cameras",
     "has_interface",
