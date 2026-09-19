@@ -104,6 +104,25 @@ export type AssistantModelChunk =
   | { type: 'usage'; promptTokens: number; completionTokens: number }
   | { type: 'done'; finish: 'stop' | 'tool_calls' | 'length' | 'error'; message?: string };
 
+/**
+ * Whether the plugin can answer right now. A model that has to be downloaded or
+ * loaded first reports `ready: false` with a line the settings page shows, and
+ * a `progress` while it knows one.
+ *
+ * @example
+ * ```ts
+ * { ready: false, message: 'macOS is downloading the model', progress: 0.62 }
+ * ```
+ */
+export interface AssistantModelStatus {
+  /** The models of this plugin can answer right now. */
+  ready: boolean;
+  /** One line for the user: what the plugin is waiting for, or what it is doing. */
+  message?: string;
+  /** How far the loading got, between 0 and 1. */
+  progress?: number;
+}
+
 /** Who the answer is for and when to stop writing it. */
 export interface AssistantModelContext {
   /** ID of the user the answer is for. Absent for scheduled runs and plugin requests. */
@@ -146,6 +165,24 @@ export interface AssistantModelProvider {
    * hardware, no permission yet).
    */
   assistantModels(): Promise<AssistantModelSpec[]> | AssistantModelSpec[];
+
+  /**
+   * Report whether the models can answer right now. The host asks before it
+   * offers them and while the settings page is open, so a model that is still
+   * downloading shows up as busy instead of missing. Leave it out when the
+   * models are usable as soon as the plugin runs.
+   *
+   * @returns Readiness, with a line and a progress while it loads.
+   *
+   * @example
+   * ```ts
+   * async assistantModelStatus(): Promise<AssistantModelStatus> {
+   *   const { loaded, total } = this.download;
+   *   return loaded < total ? { ready: false, message: 'Loading the model', progress: loaded / total } : { ready: true };
+   * }
+   * ```
+   */
+  assistantModelStatus?(): Promise<AssistantModelStatus> | AssistantModelStatus;
 
   /**
    * Answer one request. The host reads chunks until `done`, then either

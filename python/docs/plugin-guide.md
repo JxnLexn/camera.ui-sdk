@@ -697,6 +697,16 @@ async def assistantGenerate(self, request: AssistantModelRequest, ctx: Assistant
 
 Every request carries the whole conversation, the plugin keeps no state. ``contextTokens`` is not decoration: camera.ui plans prompt, tools and history with it. A tool call is yielded once its arguments are complete, the host runs the tool and asks again with the result in ``messages``.
 
+A model that has to be downloaded or loaded first implements ``assistantModelStatus()``. camera.ui asks before it offers the models and while the settings page is open, so the entry shows what the plugin is waiting for instead of disappearing:
+
+```python
+async def assistantModelStatus(self) -> AssistantModelStatus:
+    if self.session.ready:
+        return {"ready": True}
+    return {"ready": False, "message": "Loading the model", "progress": self.session.loaded / self.session.total}
+```
+
+
 ## 9. Common pitfalls
 
 - **Always release per-camera state in `onCameraReleased`.** Timers, vendor sessions, RTP sockets, `Disposable`s from `subscribe()` — drop them all. Leaking them keeps the camera object alive forever and prevents reassignment from working.

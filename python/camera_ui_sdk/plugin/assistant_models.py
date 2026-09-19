@@ -191,6 +191,27 @@ AssistantModelChunk = (
 """A piece of the answer: text, a tool call, token counts, or the end."""
 
 
+class AssistantModelStatus(TypedDict):
+    """Whether the plugin can answer right now. A model that has to be
+    downloaded or loaded first reports ``ready: False`` with a line the settings
+    page shows, and a ``progress`` while it knows one.
+
+    Example:
+        ```python
+        {"ready": False, "message": "macOS is downloading the model", "progress": 0.62}
+        ```
+    """
+
+    ready: bool
+    """The models of this plugin can answer right now."""
+
+    message: NotRequired[str]
+    """One line for the user: what the plugin is waiting for, or what it is doing."""
+
+    progress: NotRequired[float]
+    """How far the loading got, between 0 and 1."""
+
+
 class AssistantModelContext(TypedDict):
     """Who the answer is for and when to stop writing it."""
 
@@ -243,6 +264,17 @@ class AssistantModelProvider(Protocol):
         Returns:
             The specs, empty while the plugin has no usable model (no hardware,
             no permission yet).
+        """
+        ...
+
+    async def assistantModelStatus(self) -> AssistantModelStatus:
+        """Report whether the models can answer right now. The host asks before
+        it offers them and while the settings page is open, so a model that is
+        still downloading shows up as busy instead of missing. Leave it out when
+        the models are usable as soon as the plugin runs.
+
+        Returns:
+            Readiness, with a line and a progress while it loads.
         """
         ...
 
