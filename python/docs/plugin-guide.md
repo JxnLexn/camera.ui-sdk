@@ -695,7 +695,7 @@ async def assistantGenerate(self, request: AssistantModelRequest, ctx: Assistant
     yield {"type": "done", "finish": "stop"}
 ```
 
-Every request carries the whole conversation, the plugin keeps no state. ``contextTokens`` is not decoration: camera.ui plans prompt, tools and history with it. A tool call is yielded once its arguments are complete, the host runs the tool and asks again with the result in ``messages``.
+Every request carries the whole conversation, the plugin keeps no state. ``contextTokens`` is not decoration: camera.ui plans prompt, tools and history with it. A tool call is yielded once its arguments are complete, the host runs the tool and asks again with the result in ``messages``. A small model that calls the tools it sees but gets lost in a long catalog sets ``toolRouting`` to ``True``: camera.ui then picks the tools for each question with a short call of its own and offers only those. The user can switch it per model.
 
 A model that has to be downloaded or loaded first implements ``assistantModelStatus()``. camera.ui asks before it offers the models and while the settings page is open, so the entry shows what the plugin is waiting for instead of disappearing:
 
