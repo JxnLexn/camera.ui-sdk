@@ -41,6 +41,11 @@ class AssistantModelSpec(TypedDict):
     structuredOutput: bool
     """The model honors a JSON schema. Without it the host asks for free text and parses defensively."""
 
+    toolRouting: NotRequired[bool]
+    """The host picks the tools for a question with a short call of its own and puts only
+    those in front of the model. For a small model that calls the tools it sees but
+    does not work through a catalog of fifty."""
+
     note: NotRequired[str]
     """One line shown next to the model, for example where it runs or what it costs."""
 
