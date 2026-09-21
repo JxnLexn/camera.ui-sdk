@@ -65,6 +65,10 @@ from .face import (
     FaceResult,
     FaceSensor,
 )
+from .face_embedder import (
+    FaceEmbedderSensor,
+    FaceEmbeddingResult,
+)
 from .garage import (
     GarageControl,
     GarageState,
@@ -204,6 +208,7 @@ __all__ = [
     "TrackedDetection",
     "ClipEmbedding",
     "ClipResult",
+    "FaceEmbeddingResult",
     # Public sensor classes
     "MotionSensor",
     "MotionDetectorSensor",
@@ -213,6 +218,7 @@ __all__ = [
     "AudioDetectorSensor",
     "FaceSensor",
     "FaceDetectorSensor",
+    "FaceEmbedderSensor",
     "LicensePlateSensor",
     "LicensePlateDetectorSensor",
     "ClassifierSensor",

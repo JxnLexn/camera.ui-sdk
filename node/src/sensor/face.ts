@@ -14,7 +14,7 @@ import type { ModelSpec } from './spec.js';
 export enum FaceProperty {
   /** Whether any face is currently detected. */
   Detected = 'detected',
-  /** List of detected faces with optional identity, embedding, and thumbnail. */
+  /** List of detected faces, with an identity where one was matched. */
   Detections = 'detections',
   /** Names of the faces recognized during the active detection phase. */
   Identities = 'identities',
@@ -24,12 +24,8 @@ export enum FaceProperty {
 export interface FaceDetection extends Detection {
   /** Sub-detection attribute, fixed to `'face'`. */
   attribute: 'face';
-  /** Recognized identity name, if matched against known faces. */
+  /** Recognized identity name, filled in by the NVR after matching. */
   identity?: string;
-  /** Face embedding vector for recognition/comparison. */
-  embedding?: number[];
-  /** JPEG thumbnail crop of the detected face. */
-  thumbnail?: Uint8Array;
 }
 
 /**
@@ -92,8 +88,8 @@ export class FaceSensor<TStorage extends object = Record<string, any>> extends S
    * - `reportDetections(true)`: face detected without specifics (e.g. a
    *   bare face-event from a discovery provider). The SDK synthesizes a
    *   single full-frame face detection without identity.
-   * - `reportDetections(true, [...])`: explicit face detections with
-   *   identity, embedding, and/or thumbnail.
+   * - `reportDetections(true, [...])`: explicit face detections, with an
+   *   identity where the plugin recognizes the face itself.
    * - `reportDetections(false)`: clear.
    *
    * @param detected - Whether any face is currently detected.

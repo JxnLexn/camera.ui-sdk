@@ -52,6 +52,8 @@ class SensorType(StrEnum):
     """Audio event detection (glass break, scream, etc.)."""
     Face = "face"
     """Face detection and recognition."""
+    FaceEmbedder = "faceEmbedder"
+    """Face embedding generation from a face crop, for recognition against enrolled faces."""
     LicensePlate = "licensePlate"
     """License plate detection and OCR."""
     Classifier = "classifier"

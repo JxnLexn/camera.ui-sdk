@@ -10,6 +10,7 @@ export * from './contact.js';
 export * from './detection.js';
 export * from './doorbell.js';
 export * from './face.js';
+export * from './faceEmbedder.js';
 export * from './garage.js';
 export * from './gas.js';
 export * from './heat.js';

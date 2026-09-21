@@ -24,6 +24,7 @@ from .assistant import AssistantToolProvider
 
 if TYPE_CHECKING:
     from ..camera import CameraConfig, CameraDevice
+    from ..camera.enums import Point
     from ..manager import AdoptedSensor, DiscoveredCamera, DiscoveredSensor
     from ..sensor.base import Sensor, SensorLike
     from ..storage import DeviceStorage, JsonSchemaWithoutCallbacks
@@ -96,10 +97,7 @@ class FaceDetectionPluginResponse(TypedDict):
     """True when the run produced at least one detection."""
 
     detections: list[FaceDetection]
-    """Detected faces, each with its embedding."""
-
-    embeddingModel: NotRequired[str]
-    """Model that produced the embeddings; consumers must not mix models."""
+    """Located faces. Vectors come from a face-embedding plugin, not from here."""
 
 
 class LicensePlateDetectionPluginResponse(TypedDict):
@@ -133,6 +131,22 @@ class ClipDetectionPluginResponse(TypedDict):
 
     scoreBand: list[float]
     """[floor, ceiling] of raw text-image cosine scores for this model; consumers map scores to a 0..1 relevance scale and treat a missing band as score 0."""
+
+
+class FaceEmbeddingPluginResponse(TypedDict):
+    """Result of a face embedding run on a single image."""
+
+    embedding: list[float]
+    """Embedding vector for the face, empty when no face could be embedded."""
+
+    embeddingModel: str
+    """Model that produced the embedding; consumers must not mix models."""
+
+    landmarks: NotRequired[list[Point]]
+    """The five points the face was aligned on, in 0 - 1 of the input image: right eye, left eye, nose, right and left mouth corner."""
+
+    quality: NotRequired[float]
+    """How sure the model is that those points sit on a face (0 - 1)."""
 
 
 class ClipTextEmbeddingResult(TypedDict):
@@ -528,6 +542,36 @@ class ClassifierDetectionInterface(Protocol):
 
     async def classifierDetectionSettings(self) -> list[JsonSchema] | None:
         """Return the JSON schema for the classifier-detection settings form in the UI, or None for no schema."""
+        ...
+
+
+@runtime_checkable
+class FaceEmbeddingInterface(Protocol):
+    """Implemented by plugins that turn a face crop into an embedding vector.
+
+    Split from face detection so the two can run on different hosts: locating a
+    face is cheap, embedding it is not.
+    """
+
+    async def embedFaceImages(
+        self,
+        images: list[bytes],
+        config: dict[str, Any] | None = None,
+        landmarks: list[list[Point] | None] | None = None,
+    ) -> list[FaceEmbeddingPluginResponse | None]:
+        """Embed a batch of encoded images (JPEG/PNG), each showing one face.
+
+        One result per input in the same order. An empty ``embedding`` means the
+        picture holds no face this model can use, None that the plugin could not run
+        at all: the caller may drop such a picture, so the two must not be mixed up.
+        Meant for re-embedding stored pictures after an embedding-model change.
+        ``landmarks`` holds the points an earlier result returned for the same picture,
+        one entry per image: with them the face is not searched again.
+        """
+        ...
+
+    async def faceEmbeddingSettings(self) -> list[JsonSchema] | None:
+        """Return the JSON schema for the face-embedding settings form in the UI, or None for no schema."""
         ...
 
 

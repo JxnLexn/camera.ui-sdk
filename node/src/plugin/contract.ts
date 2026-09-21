@@ -53,6 +53,8 @@ export enum PluginInterface {
   ClassifierDetection = 'ClassifierDetection',
   /** Implements ClipDetectionInterface (CLIP image and text embeddings used for semantic search). */
   ClipDetection = 'ClipDetection',
+  /** Implements FaceEmbeddingInterface (turns a face crop into a vector). Matching against enrolled faces happens in the NVR. */
+  FaceEmbedding = 'FaceEmbedding',
   /** Implements DiscoveryProvider (network scan + adoption). Only valid for camera-controlling roles. */
   DiscoveryProvider = 'DiscoveryProvider',
   /** Implements SensorDiscoveryProvider (external sensor inventory the user adopts from). */

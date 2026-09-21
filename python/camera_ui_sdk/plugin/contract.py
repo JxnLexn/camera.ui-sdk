@@ -67,6 +67,9 @@ class PluginInterface(StrEnum):
     ClipDetection = "ClipDetection"
     """Implements ClipDetectionInterface (CLIP image and text embeddings used for semantic search)."""
 
+    FaceEmbedding = "FaceEmbedding"
+    """Implements FaceEmbeddingInterface (turns a face crop into a vector). Matching against enrolled faces happens in the NVR."""
+
     DiscoveryProvider = "DiscoveryProvider"
     """Implements DiscoveryProvider (network scan + adoption). Only valid for camera-controlling roles."""
 

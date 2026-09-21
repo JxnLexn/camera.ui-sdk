@@ -163,13 +163,18 @@ class AudioDetectionSettings(TypedDict):
     """Minimum confidence threshold (0 - 1) for a labelled audio detection to count."""
 
 
+FaceMatchSensitivity = Literal["strict", "balanced", "relaxed"]
+"""How readily a face counts as a known person."""
+
+
 class FaceDetectionSettings(TypedDict):
     """Face detection settings."""
 
     confidence: NotRequired[float]
     """Minimum confidence threshold (0 - 1) for a face to count."""
-    matchThreshold: NotRequired[float]
-    """Minimum similarity (0 - 1) for a face to be recognized as an enrolled person."""
+    matchSensitivity: NotRequired[FaceMatchSensitivity]
+    """How readily a face is recognized as an enrolled person. Named rather than numeric
+    because the similarity a model calls a match differs per model."""
 
 
 class LicensePlateDetectionSettings(TypedDict):

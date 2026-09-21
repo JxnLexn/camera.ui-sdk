@@ -165,6 +165,8 @@ class PluginAssignments(TypedDict, total=False):
     """Audio detection plugin."""
     face: AssignedPlugin
     """Face detection plugin."""
+    faceEmbedder: AssignedPlugin
+    """Face embedding plugin."""
     licensePlate: AssignedPlugin
     """License plate detection plugin."""
     ptz: AssignedPlugin

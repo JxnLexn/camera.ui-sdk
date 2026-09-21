@@ -1,4 +1,4 @@
-import type { CameraConfig, CameraDevice } from '../camera/index.js';
+import type { CameraConfig, CameraDevice, Point } from '../camera/index.js';
 import type { AdoptedSensor, DiscoveredCamera, DiscoveredSensor } from '../manager/index.js';
 import type { AudioFrameData } from '../sensor/audio.js';
 import type { ClassifierDetection } from '../sensor/classifier.js';
@@ -59,10 +59,8 @@ export interface AudioDetectionPluginResponse {
 export interface FaceDetectionPluginResponse {
   /** True when the run produced at least one detection. */
   detected: boolean;
-  /** Detected faces, each with its embedding. */
+  /** Located faces. Vectors come from a face-embedding plugin, not from here. */
   detections: FaceDetection[];
-  /** Model that produced the embeddings; consumers must not mix models. */
-  embeddingModel?: string;
 }
 
 /** Result of a license plate detection run. */
@@ -89,6 +87,18 @@ export interface ClipDetectionPluginResponse {
   embeddingModel: string;
   /** [floor, ceiling] of raw text-image cosine scores for this model; consumers map scores to a 0..1 relevance scale and treat a missing band as score 0. */
   scoreBand: [number, number];
+}
+
+/** Result of a face embedding run on a single image. */
+export interface FaceEmbeddingPluginResponse {
+  /** Embedding vector for the face, empty when no face could be embedded. */
+  embedding: number[];
+  /** Model that produced the embedding; consumers must not mix models. */
+  embeddingModel: string;
+  /** The five points the face was aligned on, in 0 - 1 of the input image: right eye, left eye, nose, right and left mouth corner. */
+  landmarks?: Point[];
+  /** How sure the model is that those points sit on a face (0 - 1). */
+  quality?: number;
 }
 
 /** Result of a CLIP text embedding request. */
@@ -368,6 +378,30 @@ export interface FaceDetectionInterface {
   faceDetectionSettings?(): Promise<JsonSchema[] | undefined>;
 }
 
+/**
+ * Implemented by plugins that turn a face crop into an embedding vector. Split
+ * from face detection so the two can run on different hosts: locating a face is
+ * cheap, embedding it is not.
+ */
+export interface FaceEmbeddingInterface {
+  /**
+   * Embed a batch of encoded images (JPEG/PNG), each showing one face: one result per
+   * input in the same order. An empty `embedding` means the picture holds no face this
+   * model can use, undefined that the plugin could not run at all — the caller may drop
+   * such a picture, so the two must not be mixed up. Meant for re-embedding stored
+   * pictures after an embedding-model change. `landmarks` holds the points an earlier
+   * result returned for the same picture, one entry per image: with them the face is
+   * not searched again.
+   */
+  embedFaceImages(
+    images: (Buffer | Uint8Array)[],
+    config?: Record<string, unknown>,
+    landmarks?: (Point[] | undefined)[],
+  ): Promise<(FaceEmbeddingPluginResponse | undefined)[]>;
+  /** Return the JSON schema for the face-embedding settings form in the UI, or undefined for no schema. */
+  faceEmbeddingSettings?(): Promise<JsonSchema[] | undefined>;
+}
+
 /** Implemented by plugins that locate license plates and run OCR on them. */
 export interface LicensePlateDetectionInterface {
   /** Run detection on a single image captured by the UI test panel and return the result for preview rendering. */
@@ -433,6 +467,7 @@ export type PluginInterfaces = Partial<
   ObjectDetectionInterface &
   AudioDetectionInterface &
   FaceDetectionInterface &
+  FaceEmbeddingInterface &
   LicensePlateDetectionInterface &
   ClassifierDetectionInterface &
   ClipDetectionInterface &

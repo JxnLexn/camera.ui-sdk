@@ -78,6 +78,8 @@ export enum SensorType {
   Audio = 'audio',
   /** Face detection and recognition. */
   Face = 'face',
+  /** Face embedding generation from a face crop, for recognition against enrolled faces. */
+  FaceEmbedder = 'faceEmbedder',
   /** License plate detection and OCR. */
   LicensePlate = 'licensePlate',
   /** General-purpose image classifier. */

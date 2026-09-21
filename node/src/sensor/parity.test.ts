@@ -67,6 +67,17 @@ describe('cross-SDK parity', () => {
     expect(go).toBe(PROTOCOL_LEVEL);
   });
 
+  it('go detection-sensor list matches the metadata', () => {
+    const source = read('go/sensor_base.go');
+    const constByName = new Map([...source.matchAll(/(SensorType\w+)\s+SensorType\s*=\s*"([^"]+)"/g)].map((m) => [m[1], m[2]]));
+    const listed = new Set(
+      [...block(source, /func isDetectionSensorType\(t SensorType\) bool \{([\s\S]*?)\n\}/).matchAll(/SensorType\w+/g)].map((m) => constByName.get(m[0])),
+    );
+    const detectionTypes = SENSOR_META.filter((meta) => meta.isDetectionType).map((meta) => meta.type as string);
+
+    expect([...listed].sort()).toEqual([...detectionTypes].sort());
+  });
+
   it('go contract-validation sensor list covers every SensorType', () => {
     const constByName = new Map([...read('go/sensor_base.go').matchAll(/(SensorType\w+)\s+SensorType\s*=\s*"([^"]+)"/g)].map((m) => [m[1], m[2]]));
     const listed = new Set(

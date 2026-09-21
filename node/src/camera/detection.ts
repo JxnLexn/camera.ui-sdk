@@ -181,11 +181,14 @@ export interface FaceDetectionSettings {
   /** Minimum confidence threshold (0 - 1) for a face to count. */
   confidence?: number;
   /**
-   * Minimum similarity (0 - 1) for a face to be recognized as an enrolled
-   * person. Higher means fewer false matches, lower means more matches.
+   * How readily a face is recognized as an enrolled person. Named rather than
+   * numeric because the similarity a model calls a match differs per model.
    */
-  matchThreshold?: number;
+  matchSensitivity?: FaceMatchSensitivity;
 }
+
+/** How readily a face counts as a known person. */
+export type FaceMatchSensitivity = 'strict' | 'balanced' | 'relaxed';
 
 /** License plate detection settings. */
 export interface LicensePlateDetectionSettings {

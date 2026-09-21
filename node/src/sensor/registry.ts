@@ -8,6 +8,7 @@ import { coldMeta } from './cold.js';
 import { contactMeta } from './contact.js';
 import { doorbellMeta } from './doorbell.js';
 import { faceMeta } from './face.js';
+import { faceEmbedderMeta } from './faceEmbedder.js';
 import { garageMeta } from './garage.js';
 import { gasMeta } from './gas.js';
 import { heatMeta } from './heat.js';
@@ -47,6 +48,7 @@ export const SENSOR_META = [
   contactMeta,
   doorbellMeta,
   faceMeta,
+  faceEmbedderMeta,
   garageMeta,
   gasMeta,
   heatMeta,

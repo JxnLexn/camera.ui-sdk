@@ -19,7 +19,7 @@ class FaceProperty(StrEnum):
     Detected = "detected"
     """Whether any face is currently detected."""
     Detections = "detections"
-    """List of detected faces with optional identity, embedding, and thumbnail."""
+    """List of detected faces, with an identity where one was matched."""
     Identities = "identities"
     """Names of the faces recognized during the active detection phase."""
 
@@ -31,10 +31,6 @@ class FaceDetection(Detection):
     """Sub-detection attribute, fixed to "face"."""
     identity: NotRequired[str]
     """Recognized identity name, if matched against known faces."""
-    embedding: NotRequired[list[float]]
-    """Face embedding vector for recognition/comparison."""
-    thumbnail: NotRequired[bytes]
-    """JPEG thumbnail crop of the detected face."""
 
 
 class FaceSensorProperties(TypedDict):
@@ -123,8 +119,8 @@ class FaceSensor(Sensor[FaceSensorProperties, TStorage, str], Generic[TStorage])
         - ``reportDetections(True)``: face detected without specifics (e.g. a
           bare face-event from a discovery provider). The SDK synthesizes a
           single full-frame face detection without identity.
-        - ``reportDetections(True, [...])``: explicit face detections with
-          identity, embedding, and/or thumbnail.
+        - ``reportDetections(True, [...])``: explicit face detections, with an
+          identity where the plugin recognizes the face itself.
         - ``reportDetections(False)``: clear.
 
         Args:
